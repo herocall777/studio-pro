@@ -1,0 +1,13 @@
+# 임시/개발용 파일
+StudioPro_compiled.html
+StudioPro_local.html
+StudioPro.html
+icon-preview.html
+test.html
+test2.html
+serve.sh
+libs/
+supabase/
+.DS_Store
+
+# 올릴 파일: index.html, manifest.json, sw.js, icons/, supabase-functions/
