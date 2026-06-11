@@ -363,15 +363,16 @@ var PALETTE = ['#E07B8B', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4']
 
 /* ══════════════════ SUPABASE SYNC ══════════════════ */
 var _sbClient = null;
+var _sbClientUrl = null;
+var _sbClientKey = null;
 function getSb(url, key) {
-  if (!_sbClient && url && key) {
-    try {
-      _sbClient = supabase.createClient(url, key);
-    } catch (e) {
-      console.error('Supabase init error', e);
-    }
-  }
+  if (!url || !key) return _sbClient;
+  if (_sbClient && _sbClientUrl === url && _sbClientKey === key) return _sbClient;
+  try { _sbClient = supabase.createClient(url, key); _sbClientUrl = url; _sbClientKey = key; } catch (e) { console.error('Supabase init error', e); }
   return _sbClient;
+}
+function getAdminSb() {
+  try { return supabase.createClient('https://uwrgfnyydroizsvexiwe.supabase.co', 'sb_secret_PPZYticiFhnawV_GoQRSYw_JwL0PMwz'); } catch(e) { return null; }
 }
 
 /* ══════════════════ INDEXEDDB (자료실 파일) ══════════════════ */
@@ -25144,7 +25145,7 @@ function LoginScreen(_ref101) {
   }
   function _setNewFpPasswordBySms() {
     _setNewFpPasswordBySms = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee17() {
-      var ADMIN_URL, ADMIN_KEY, adminSb, digits, fakeEmail, _yield$sb$auth$admin$, listData, listErr, user, _yield$sb$auth$admin$2, upErr, _linkData$properties, redirectTo, _yield$sb$auth$admin$3, linkData, linkErr, EDGE_URL, res, data, _t9, _t0, _t1;
+      var adminSb, digits, fakeEmail, _yield$sb$auth$admin$, listData, listErr, user, _yield$sb$auth$admin$2, upErr, _linkData$properties, redirectTo, _yield$sb$auth$admin$3, linkData, linkErr, EDGE_URL, res, data, _t9, _t0, _t1;
       return _regenerator().w(function (_context17) {
         while (1) switch (_context17.p = _context17.n) {
           case 0:
@@ -25164,9 +25165,7 @@ function LoginScreen(_ref101) {
           case 2:
             setFpLoading(true);
             setFpError('');
-            ADMIN_URL = 'https://uwrgfnyydroizsvexiwe.supabase.co';
-            ADMIN_KEY = 'sb_secret_PPZYticiFhnawV_GoQRSYw_JwL0PMwz';
-            adminSb = getSb(ADMIN_URL, ADMIN_KEY);
+            adminSb = getAdminSb();
             digits = fpInput.replace(/[^0-9]/g, '');
             fakeEmail = phoneToEmail(fpInput); // ① Admin API로 직접 비밀번호 변경
             _context17.p = 3;
