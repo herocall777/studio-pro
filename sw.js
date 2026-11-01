@@ -1,9 +1,11 @@
-// ScheduleMate — Service Worker v2.0
-const CACHE = 'scheduleMate-v2';
+// ScheduleMate — Service Worker v3.0 (push)
+const CACHE = 'scheduleMate-v3';
 const STATIC = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/mm-config.js',
+  '/mm-ext.js',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -69,4 +71,25 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
+});
+
+
+// ── 푸시 알림 (등원/하원, 수업 요약) ──
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: '알림', body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'ScheduleMate', {
+    body: d.body || '',
+    icon: '/studio-pro/icons/icon-192.png',
+    badge: '/studio-pro/icons/icon-192.png',
+    data: { url: d.url || '/studio-pro/' },
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/studio-pro/';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    return clients.openWindow(url);
+  }));
 });

@@ -42,6 +42,8 @@
 <script src="libs/react.min.js"></script>
 <script src="libs/react-dom.min.js"></script>
 <script src="libs/supabase.js"></script>
+<script src="mm-config.js"></script>
+<script src="mm-ext.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -367,9 +369,7 @@ function getSb(url, key) {
   try { _sbClient = supabase.createClient(url, key); _sbClientUrl = url; _sbClientKey = key; } catch (e) { console.error('Supabase init error', e); }
   return _sbClient;
 }
-function getAdminSb() {
-  try { return supabase.createClient('https://uwrgfnyydroizsvexiwe.supabase.co', 'sb_secret_PPZYticiFhnawV_GoQRSYw_JwL0PMwz'); } catch(e) { return null; }
-}
+function getAdminSb() { return null; } // 보안: 관리자 키는 브라우저에 두지 않습니다(서버 함수로 처리)
 
 /* ══════════════════ INDEXEDDB (자료실 파일) ══════════════════ */
 function idbOpen() {
@@ -20854,6 +20854,18 @@ var NAV_GROUPS = [
   minPlan: 'light'
 }, {
   type: 'item',
+  id: 'mm-student',
+  label: '내 출결·기록',
+  icon: '📲',
+  roles: ['학생', '학부모']
+}, {
+  type: 'item',
+  id: 'mm-board',
+  label: '출결·기록',
+  icon: '🕘',
+  roles: ['원장', '실장', '강사']
+}, {
+  type: 'item',
   id: 'bulletin',
   label: '게시판',
   icon: '',
@@ -25159,8 +25171,10 @@ function LoginScreen(_ref101) {
             setFpError('비밀번호가 일치하지 않습니다');
             return _context17.a(2);
           case 2:
-            setFpLoading(true);
-            setFpError('');
+            setFpLoading(false);
+            setFpError('전화번호 비밀번호는 보안상 직접 변경할 수 없어요. 학원 원장님께 "비밀번호 재설정"을 요청해 주세요. (이메일로 가입한 경우 "이메일로 찾기"를 이용하세요)');
+            return _context17.a(2);
+          case 99:
             adminSb = getAdminSb();
             digits = fpInput.replace(/[^0-9]/g, '');
             fakeEmail = phoneToEmail(fpInput); // ① Admin API로 직접 비밀번호 변경
@@ -26057,38 +26071,7 @@ function LoginScreen(_ref101) {
       color: 'rgba(255,255,255,.65)',
       lineHeight: 1.8
     }
-  }, "\uC804\uD654\uBC88\uD638 \uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD\uC740 \uC544\uB798 \uB450 \uBC29\uBC95 \uC911 \uD558\uB098\uB85C \uD574\uACB0\uD560 \uC218 \uC788\uC5B4\uC694:")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 12,
-      padding: '12px 14px',
-      background: 'rgba(255,255,255,.06)',
-      borderRadius: 8,
-      border: '1px solid rgba(255,255,255,.1)'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      color: '#a5b4fc',
-      fontSize: 12,
-      marginBottom: 6
-    }
-  }, "\uBC29\uBC95 1 (\uBE60\uB984) \u2014 \uC11C\uBE44\uC2A4 \uB864 \uD0A4 \uC124\uC815"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: 'rgba(255,255,255,.55)',
-      lineHeight: 1.7
-    }
-  }, "1. ", /*#__PURE__*/React.createElement("a", {
-    href: "https://supabase.com/dashboard",
-    target: "_blank",
-    style: {
-      color: '#60a5fa'
-    }
-  }, "supabase.com/dashboard"), " \uC811\uC18D", /*#__PURE__*/React.createElement("br", null), "2. \uD504\uB85C\uC81D\uD2B8 \u2192 Settings \u2192 API", /*#__PURE__*/React.createElement("br", null), "3. ", /*#__PURE__*/React.createElement("b", {
-    style: {
-      color: '#fcd34d'
-    }
-  }, "service_role key"), " \uBCF5\uC0AC", /*#__PURE__*/React.createElement("br", null), "4. \uC774 \uC571 \u2192 \uC124\uC815 \u2192 \u2601\uFE0F \uD074\uB77C\uC6B0\uB4DC \u2192 ", /*#__PURE__*/React.createElement("b", null, "Supabase Key"), " \uC5D0 \uBD99\uC5EC\uB123\uAE30", /*#__PURE__*/React.createElement("br", null), "5. \uC800\uC7A5 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4")), /*#__PURE__*/React.createElement("div", {
+  }, "\uC804\uD654\uBC88\uD638 \uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD\uC740 \uC544\uB798 \uBC29\uBC95\uC73C\uB85C \uD574\uACB0\uD560 \uC218 \uC788\uC5B4\uC694:")), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 14,
       padding: '12px 14px',
@@ -26103,7 +26086,7 @@ function LoginScreen(_ref101) {
       fontSize: 12,
       marginBottom: 6
     }
-  }, "\uBC29\uBC95 2 \u2014 Edge Function \uBC30\uD3EC (1\uD68C)"), /*#__PURE__*/React.createElement("div", {
+  }, "Edge Function \uBC30\uD3EC (1\uD68C)"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: 'rgba(255,255,255,.55)',
@@ -28855,6 +28838,15 @@ function App() {
     passes: passes,
     members: members,
     account: effectiveAccount
+  }), page === 'mm-student' && window.MMStudent && /*#__PURE__*/React.createElement(window.MMStudent, {
+    account: effectiveAccount
+  }), page === 'mm-board' && window.MMBoard && /*#__PURE__*/React.createElement(window.MMBoard, {
+    account: effectiveAccount,
+    members: members,
+    instructors: instructors
+  }), window.MMGlobal && /*#__PURE__*/React.createElement(window.MMGlobal, {
+    account: effectiveAccount,
+    setPage: setPage
   }), page === 'practice' && /*#__PURE__*/React.createElement(PracticeSection, {
     practiceRecords: practiceRecords,
     setPracticeRecords: setPracticeRecords,
