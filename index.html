@@ -28839,16 +28839,16 @@ function App() {
     members: members,
     account: effectiveAccount
   }), page === 'mm-student' && window.MMStudent && /*#__PURE__*/React.createElement(window.MMStudent, {
-    account: effectiveAccount
+    account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId })
   }), page === 'mm-board' && window.MMBoard && /*#__PURE__*/React.createElement(window.MMBoard, {
-    account: effectiveAccount,
+    account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
     members: members,
     instructors: instructors,
     setMembers: setMembers,
     setPasses: setPasses,
     setInstructors: setInstructors
   }), window.MMGlobal && /*#__PURE__*/React.createElement(window.MMGlobal, {
-    account: effectiveAccount,
+    account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
     setPage: setPage
   }), page === 'practice' && /*#__PURE__*/React.createElement(PracticeSection, {
     practiceRecords: practiceRecords,
