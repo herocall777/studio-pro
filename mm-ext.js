@@ -420,6 +420,7 @@
     var a = props.account, members = props.members || [], instructors = props.instructors || [];
     var studio = String(a.studioId);
     return h('div', null,
+      isAdmin(a) ? h(ImportCard, props) : null,
       isOwner(a) ? h(AiKeyCard, { studio: studio }) : null,
       h(RosterCard, { studio: studio, members: members, instructors: instructors }),
       h(ResetPwCard, { studio: studio }),
@@ -472,6 +473,133 @@
       h(Msg, { text: msg, err: bad }));
   }
 
+  /* ───────── 스튜디오메이트 엑셀 가져오기 (회원 + 수강권 + 강사) ───────── */
+  function loadSheetJS() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise(function (res, rej) {
+      var sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      sc.onload = res; sc.onerror = function () { rej(new Error('엑셀 읽기 도구를 불러오지 못했습니다(인터넷 확인)')); };
+      document.head.appendChild(sc);
+    });
+  }
+  function ymd(v) {
+    if (!v) return '';
+    if (v instanceof Date) return v.getFullYear() + '-' + ('0' + (v.getMonth() + 1)).slice(-2) + '-' + ('0' + v.getDate()).slice(-2);
+    var s = String(v).trim(), m;
+    if ((m = s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/))) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+    return '';
+  }
+  function digits(v) { return String(v || '').replace(/\D/g, ''); }
+  function fmtPhone(v) {
+    var d = digits(v); if (d.length === 11) return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    if (d.length === 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6); return String(v || '');
+  }
+  var IMP_COLORS = ['#E07B8B', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16'];
+
+  function buildImport(rows, cur) {
+    var warn = [], today = kstDate();
+    var existingKey = {}; (cur.members || []).forEach(function (m) { existingKey[(m.name || '') + '|' + digits(m.phone)] = true; });
+    var instByName = {}; (cur.instructors || []).forEach(function (i) { instByName[i.name] = i; });
+    var newInst = [], members = [], memberByKey = {}, passes = [], skippedExisting = 0, trials = 0, noTeacher = 0, strippedNames = 0, noPhone = 0;
+    var seq = Date.now().toString(36);
+
+    rows.forEach(function (r, idx) {
+      var phone = fmtPhone(r['전화번호']), d4 = digits(r['전화번호']).slice(-4);
+      var name = String(r['이름'] || '').trim(); if (!name) return;
+      if (/체험수업/.test(name)) { trials++; return; }   // '1회체험수업','2체험수업' 같은 임시 항목 제외
+      // 스튜디오메이트는 동명이인 구분을 위해 이름 끝에 전화 뒷4자리를 붙이는 경우가 있음
+      if (d4 && name.length > 4 && name.slice(-4) === d4) { name = name.slice(0, -4).trim(); strippedNames++; }
+      var key = name + '|' + digits(phone) + (phone ? '' : '|row' + idx);
+      var tName = '', tSub = '';
+      if (r['담당강사']) { var parts = String(r['담당강사']).trim().split(/\s+/); tName = parts[0]; tSub = parts.slice(1).join(' ').replace(/강사$/, ''); }
+      var inst = null;
+      if (tName) {
+        inst = instByName[tName];
+        if (!inst) {
+          inst = { id: 'ti_' + seq + '_' + newInst.length, name: tName, subject: tSub || '음악', phone: '', payType: '수업당', payAmount: 0,
+            joinDate: today, color: IMP_COLORS[(newInst.length + (cur.instructors || []).length) % IMP_COLORS.length], personalRate: 0, groupRate: 0,
+            contractSigned: false, contractSignature: '', contractSignedAt: '' };
+          newInst.push(inst); instByName[tName] = inst;
+        }
+      }
+      var mem = memberByKey[key];
+      if (!mem) {
+        if (existingKey[name + '|' + digits(phone)]) { skippedExisting++; memberByKey[key] = false; return; }
+        if (!phone) noPhone++;
+        mem = { id: 'sm_' + seq + '_' + members.length, name: name, phone: phone, parentPhone: '', birthdate: ymd(r['생년월일']),
+          type: '음악', subject: tSub || '', instructorId: inst ? inst.id : '', joinDate: ymd(r['등록일']) || today, status: 'active',
+          memo: r['메모'] ? String(r['메모']) : '', adminMemo: '', consentSigned: false, consentSignedAt: '' };
+        members.push(mem); memberByKey[key] = mem;
+      }
+      if (mem === false) return;
+      if (!mem.instructorId && inst) { mem.instructorId = inst.id; mem.subject = mem.subject || tSub; }
+      if (r['수강권명']) {
+        var total = Number(r['전체횟수']) || 0, rem = Number(r['잔여횟수']);
+        if (total >= 900) { trials++; return; }               // '1회 체험수업'(999회) 같은 임시 수강권은 제외
+        passes.push({ id: 'sp_' + seq + '_' + passes.length, memberId: mem.id, templateId: '', name: String(r['수강권명']),
+          category: r['수강권종류'] === '그룹' ? '그룹레슨' : '개인레슨', color: IMP_COLORS[passes.length % IMP_COLORS.length],
+          total: total, remaining: isNaN(rem) ? total : rem, price: Number(r['결제금액']) || 0,
+          startDate: ymd(r['수강권시작일']) || today, expiry: ymd(r['수강권종료일']) || '' });
+      }
+    });
+    members.forEach(function (m) { if (!m.instructorId) noTeacher++; });
+    if (skippedExisting) warn.push('이미 등록된 회원 ' + skippedExisting + '명은 건너뜁니다');
+    if (trials) warn.push('체험수업용 임시 수강권 ' + trials + '건은 제외했습니다');
+    if (noTeacher) warn.push('담당 강사가 없는 회원 ' + noTeacher + '명 (등록 후 앱에서 지정하세요)');
+    if (noPhone) warn.push('전화번호가 없는 회원 ' + noPhone + '명');
+    if (strippedNames) warn.push('이름 끝의 전화 뒷4자리 ' + strippedNames + '건을 제거했습니다');
+    warn.push('학부모 전화번호는 엑셀에 없습니다. 등록 후 회원 정보에서 입력해야 학부모 알림이 갑니다');
+    return { members: members, instructors: newInst, passes: passes, warn: warn };
+  }
+
+  function ImportCard(props) {
+    var _p = useState(null), plan = _p[0], setPlan = _p[1];
+    var _m = useState(''), msg = _m[0], setMsg = _m[1];
+    var _bad = useState(false), bad = _bad[0], setBad = _bad[1];
+    var _d = useState(false), done = _d[0], setDone = _d[1];
+    var can = !!(props.setMembers && props.setPasses && props.setInstructors);
+    function onFile(ev) {
+      var f = ev.target.files && ev.target.files[0]; if (!f) return;
+      setBad(false); setMsg('읽는 중…'); setDone(false); setPlan(null);
+      loadSheetJS().then(function () { return f.arrayBuffer(); }).then(function (buf) {
+        var wb = window.XLSX.read(buf, { type: 'array', cellDates: true });
+        var rows = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
+        if (!rows.length || !('이름' in rows[0])) throw new Error('스튜디오메이트 회원 목록 엑셀이 아닙니다 ("이름" 열을 찾을 수 없음)');
+        var p = buildImport(rows, { members: props.members, instructors: props.instructors });
+        setPlan(p); setMsg('');
+      }).catch(function (e) { setBad(true); setMsg(errText(e)); });
+      ev.target.value = '';
+    }
+    function apply() {
+      props.setInstructors(function (p) { return (p || []).concat(plan.instructors); });
+      props.setMembers(function (p) { return (p || []).concat(plan.members); });
+      props.setPasses(function (p) { return (p || []).concat(plan.passes); });
+      setDone(true); setPlan(null);
+      setMsg('등록했어요. 이제 아래 "명단 동기화"를 눌러 주세요.');
+    }
+    if (!can) return h(Card, { title: '📥 스튜디오메이트 엑셀 가져오기' }, h('div', { style: S.mute }, '이 화면에서는 사용할 수 없습니다(원장 화면에서 열어 주세요).'));
+    return h(Card, { title: '📥 스튜디오메이트 엑셀 가져오기' },
+      h('div', { style: S.mute }, '스튜디오메이트 "회원 목록 엑셀"을 올리면 회원 · 수강권(잔여횟수·기간) · 담당 강사를 미리보기로 보여드립니다. 확인 후 [등록]을 눌러야 반영됩니다.'),
+      h('div', { style: { marginTop: 8 } }, h('label', { style: Object.assign({}, S.btn2, { display: 'inline-block' }) }, '📁 엑셀 파일 선택', h('input', { type: 'file', accept: '.xlsx,.xls', style: { display: 'none' }, onChange: onFile }))),
+      plan ? h('div', { style: { marginTop: 12 } },
+        h('div', { style: S.row }, badge('회원 ' + plan.members.length + '명', C.green), badge('수강권 ' + plan.passes.length + '건', C.green), badge('새 강사 ' + plan.instructors.length + '명', C.amber)),
+        h('ul', { style: { margin: '8px 0', paddingLeft: 18, fontSize: 12, color: C.mute } }, plan.warn.map(function (w, i) { return h('li', { key: i }, w); })),
+        h('div', { style: { overflowX: 'auto', maxHeight: 220 } }, h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
+          h('thead', null, h('tr', null, ['이름', '연락처', '담당', '수강권(잔여/전체)'].map(function (t) { return h('th', { key: t, style: S.th }, t); }))),
+          h('tbody', null, plan.members.slice(0, 12).map(function (m) {
+            var ps = plan.passes.filter(function (x) { return x.memberId === m.id; });
+            var inst = plan.instructors.filter(function (i) { return i.id === m.instructorId; })[0] || (props.instructors || []).filter(function (i) { return i.id === m.instructorId; })[0];
+            return h('tr', { key: m.id }, h('td', { style: S.td }, m.name), h('td', { style: S.td }, m.phone ? m.phone.slice(0, 4) + '****' + m.phone.slice(-2) : '-'),
+              h('td', { style: S.td }, inst ? inst.name : '-'), h('td', { style: S.td }, ps.map(function (x) { return x.name + ' ' + x.remaining + '/' + x.total; }).join(', ') || '-'));
+          })))),
+        plan.members.length > 12 ? h('div', { style: S.mute }, '… 외 ' + (plan.members.length - 12) + '명 (연락처는 일부 가려서 표시)') : null,
+        h('div', { style: Object.assign({ marginTop: 10 }, S.row) },
+          h('button', { style: S.btn, onClick: apply, disabled: !plan.members.length }, plan.members.length + '명 등록하기'),
+          h('button', { style: S.btn2, onClick: function () { setPlan(null); } }, '취소'))) : null,
+      h(Msg, { text: msg, err: bad }));
+  }
+
   function instEmail(i) { return (i && (i.email || mail(i.phone))) || null; }
 
   function RosterCard(props) {
@@ -481,7 +609,7 @@
       var instBy = {}; (props.instructors || []).forEach(function (i) { instBy[i.id] = i; });
       var rows = (props.members || []).filter(function (m) { return m && m.id; }).map(function (m) {
         return {
-          studio_id: props.studio, member_id: String(m.id), name: m.name || '(이름없음)', subject: m.type || null,
+          studio_id: props.studio, member_id: String(m.id), name: m.name || '(이름없음)', subject: m.subject || m.type || null,
           teacher_email: instEmail(instBy[m.instructorId]), student_email: mail(m.phone),
           parent_emails: m.parentPhone ? [mail(m.parentPhone)] : [], active: m.status !== '퇴원' && m.status !== '휴원', updated_at: new Date().toISOString(),
         };
