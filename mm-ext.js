@@ -149,6 +149,17 @@
       document.addEventListener('visibilitychange', onVis);
       return function () { document.removeEventListener('visibilitychange', onVis); };
     }, [a && a.email, a && a.studioId]);
+    // 운영자: 회원·강사 정보가 바뀌면 잠시 뒤 서버 명단에 자동 반영(퇴원 처리 → 접근 차단까지 자동)
+    var sig = JSON.stringify((props.members || []).map(function (m) { return [m.id, m.name, m.phone, m.parentPhone, m.instructorId, m.status, m.subject]; })) + JSON.stringify((props.instructors || []).map(function (i) { return [i.id, i.phone]; }));
+    useEffect(function () {
+      if (!a || !isAdmin(a) || !a.studioId || !sb() || !props.members || !props.members.length) return;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(a.studioId))) return;   // 실제 학원(uuid)만
+      var t = setTimeout(function () {
+        var rows = rosterRows(String(a.studioId), props.members, props.instructors);
+        sb().from('mm_roster').upsert(rows, { onConflict: 'studio_id,member_id' }).then(function () {}, function () {});
+      }, 4000);
+      return function () { clearTimeout(t); };
+    }, [sig, a && a.studioId]);
     return null;
   }
 
@@ -421,6 +432,7 @@
     var studio = String(a.studioId);
     return h('div', null,
       isAdmin(a) ? h(ImportCard, props) : null,
+      isAdmin(a) ? h(NameFixCard, { members: members, setMembers: props.setMembers }) : null,
       isOwner(a) ? h(AiKeyCard, { studio: studio }) : null,
       h(RosterCard, { studio: studio, members: members, instructors: instructors }),
       h(ResetPwCard, { studio: studio }),
@@ -602,18 +614,56 @@
 
   function instEmail(i) { return (i && (i.email || mail(i.phone))) || null; }
 
+  /* ───────── 이름 정리: "기타 김효린", "김도윤 피아노취미", "강민준6105" → 이름만 ───────── */
+  var SUBJ_WORDS = ['재즈피아노', '클래식피아노', '실용음악', '미디작곡', '피아노', '바이올린', '플루트', '우쿨렐레', '일렉', '베이스', '보컬', '드럼', '기타', '미디', '작곡', '취미', '입시', '첼로', '플룻', '성악', '클래식', '재즈', '키보드', '랩'].sort(function (a, b) { return b.length - a.length; });
+  function cleanName(raw) {
+    var n = String(raw || '').trim(); if (!n) return { name: n, subj: '' };
+    var keep = [], subj = [];
+    n.split(/\s+/).forEach(function (t) {
+      var rest = t, hit = [], moved = true;
+      while (rest && moved) { moved = false; for (var i = 0; i < SUBJ_WORDS.length; i++) { if (rest.indexOf(SUBJ_WORDS[i]) === 0) { hit.push(SUBJ_WORDS[i]); rest = rest.slice(SUBJ_WORDS[i].length); moved = true; break; } } }
+      if (!rest && hit.length) subj = subj.concat(hit); else keep.push(t);
+    });
+    var name = keep.length ? keep.join(' ') : n;
+    name = name.replace(/(\D{2,4})\d{4}$/, '$1').replace(/^(\D{2,4})님$/, '$1');
+    if (name.length >= 3 && /님$/.test(name)) name = name.slice(0, -1);
+    return { name: name.trim() || n, subj: subj.join(' ') };
+  }
+  function rosterRows(studio, members, instructors) {
+    var instBy = {}; (instructors || []).forEach(function (i) { instBy[i.id] = i; });
+    return (members || []).filter(function (m) { return m && m.id; }).map(function (m) {
+      var active = !m.status || m.status === 'active' || m.status === '활성';
+      return {
+        studio_id: studio, member_id: String(m.id), name: cleanName(m.name).name || '(이름없음)', subject: m.subject || m.type || null,
+        teacher_email: instEmail(instBy[m.instructorId]), student_email: mail(m.phone),
+        parent_emails: m.parentPhone ? [mail(m.parentPhone)] : [], active: active, updated_at: new Date().toISOString(),
+      };
+    });
+  }
+
+  function NameFixCard(props) {
+    var _m = useState(''), msg = _m[0], setMsg = _m[1];
+    var fixes = (props.members || []).map(function (m) { var c = cleanName(m.name); return c.name !== m.name || (c.subj && !m.subject) ? { m: m, c: c } : null; }).filter(Boolean);
+    function apply() {
+      var by = {}; fixes.forEach(function (f) { by[f.m.id] = f.c; });
+      props.setMembers(function (ms) { return (ms || []).map(function (m) { var c = by[m.id]; return c ? Object.assign({}, m, { name: c.name, subject: m.subject || c.subj || m.subject || '' }) : m; }); });
+      setMsg(fixes.length + '명 이름을 정리했습니다. 명단은 자동으로 서버에 반영됩니다.');
+    }
+    return h(Card, { title: '✏️ 회원 이름 정리' },
+      h('div', { style: S.mute }, '"기타 김효린", "김도윤 피아노취미", "강민준6105"처럼 이름에 악기·전화 뒷자리가 붙은 회원을 이름만 남기고 정리합니다(악기는 과목 칸으로 이동). 학부모 알림에 "기타 김효린 학생이 등원했어요"처럼 나가는 것을 막습니다.'),
+      fixes.length
+        ? h('div', null,
+            h('div', { style: { marginTop: 8, fontSize: 13 } }, '정리 대상 ' + fixes.length + '명 · 예: ' + fixes.slice(0, 6).map(function (f) { return f.m.name + ' → ' + f.c.name; }).join(', ')),
+            h('div', { style: { marginTop: 8 } }, h('button', { style: S.btn, onClick: apply }, '이름 정리 적용')))
+        : h('div', { style: { marginTop: 8, fontSize: 13 } }, '정리할 이름이 없습니다 ✅'),
+      h(Msg, { text: msg, err: false }));
+  }
+
   function RosterCard(props) {
     var _m = useState(''), msg = _m[0], setMsg = _m[1];
     var _bad = useState(false), bad = _bad[0], setBad = _bad[1];
     function sync() {
-      var instBy = {}; (props.instructors || []).forEach(function (i) { instBy[i.id] = i; });
-      var rows = (props.members || []).filter(function (m) { return m && m.id; }).map(function (m) {
-        return {
-          studio_id: props.studio, member_id: String(m.id), name: m.name || '(이름없음)', subject: m.subject || m.type || null,
-          teacher_email: instEmail(instBy[m.instructorId]), student_email: mail(m.phone),
-          parent_emails: m.parentPhone ? [mail(m.parentPhone)] : [], active: m.status !== '퇴원' && m.status !== '휴원', updated_at: new Date().toISOString(),
-        };
-      });
+      var rows = rosterRows(props.studio, props.members, props.instructors);
       if (!rows.length) { setBad(true); return setMsg('동기화할 회원이 없습니다'); }
       setBad(false); setMsg('동기화 중…');
       sb().from('mm_roster').upsert(rows, { onConflict: 'studio_id,member_id' }).then(function (r) {

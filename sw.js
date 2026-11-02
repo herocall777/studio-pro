@@ -1,5 +1,5 @@
-// ScheduleMate — Service Worker v3.0 (push)
-const CACHE = 'scheduleMate-v3';
+// ScheduleMate — Service Worker v4.0 (push)
+const CACHE = 'scheduleMate-v4';
 const STATIC = [
   '/',
   '/index.html',

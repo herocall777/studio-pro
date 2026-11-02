@@ -24614,7 +24614,7 @@ function LoginScreen(_ref101) {
   React.useEffect(function () {
     var _getSb2;
     if (!inviteToken || !sbUrl || !sbKey) return;
-    (_getSb2 = getSb(sbUrl, sbKey)) === null || _getSb2 === void 0 || _getSb2.from('invites').select('*').eq('token', inviteToken).eq('used', false).maybeSingle().then(function (_ref102) {
+    (_getSb2 = getSb(sbUrl, sbKey)) === null || _getSb2 === void 0 || _getSb2.rpc('mm_get_invite', { p_token: inviteToken }).maybeSingle().then(function (_ref102) {
       var data = _ref102.data;
       if (data) {
         setInviteInfo(data);
@@ -25509,7 +25509,7 @@ function LoginScreen(_ref101) {
           case 6:
             _context19.p = 6;
             _context19.n = 7;
-            return sb.from('studios').select('*').eq('studio_code', studioCodeInput.trim().toUpperCase()).maybeSingle();
+            return sb.rpc('mm_get_studio_by_code', { p_code: studioCodeInput.trim().toUpperCase() }).maybeSingle();
           case 7:
             _yield$sb$from$select = _context19.v;
             studio = _yield$sb$from$select.data;
@@ -27657,7 +27657,7 @@ function App() {
               bookingSettings: bookingSettings,
               managerTasks: managerTasks,
               bulletin: bulletin,
-              geminiKey: geminiKey,
+              geminiKey: '',
               financeData: financeData,
               payrollData: payrollData,
               instructorAttendance: instructorAttendance
@@ -27751,7 +27751,7 @@ function App() {
             if (d.bookingSettings) setBookingSettings(d.bookingSettings);
             if ((_d$managerTasks = d.managerTasks) !== null && _d$managerTasks !== void 0 && _d$managerTasks.length) setManagerTasks(d.managerTasks);
             if ((_d$bulletin = d.bulletin) !== null && _d$bulletin !== void 0 && _d$bulletin.length) setBulletin(d.bulletin);
-            if (d.geminiKey) setGeminiKey(d.geminiKey);
+            /* AI 키는 서버/기기에만 보관: 클라우드 데이터로 공유하지 않음 */
             if ((_d$unpaid = d.unpaid) !== null && _d$unpaid !== void 0 && _d$unpaid.length) setUnpaid(d.unpaid);
             if (d.financeData && Object.keys(d.financeData).length) setFinanceData(d.financeData);
             if (d.payrollData && Object.keys(d.payrollData).length) setPayrollData(d.payrollData);
@@ -28849,7 +28849,9 @@ function App() {
     setInstructors: setInstructors
   }), window.MMGlobal && /*#__PURE__*/React.createElement(window.MMGlobal, {
     account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
-    setPage: setPage
+    setPage: setPage,
+    members: members,
+    instructors: instructors
   }), page === 'practice' && /*#__PURE__*/React.createElement(PracticeSection, {
     practiceRecords: practiceRecords,
     setPracticeRecords: setPracticeRecords,
