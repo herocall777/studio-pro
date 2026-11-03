@@ -269,8 +269,12 @@
   }
   function KidPicker(p) {
     var _q = useState(''), q = _q[0], setQ = _q[1];
-    var kids = (p.kids || []).filter(function (k) { return nameMatch(k.name, q); });
+    var _c = useState(''), cat = _c[0], setCat = _c[1];
+    var subjects = (p.s && p.s.subjects) || [];
+    var kf = function (k) { return catOf(subjects, k.subject); };
+    var kids = (p.kids || []).filter(function (k) { return nameMatch(k.name, q) && (!cat || kf(k) === cat); });
     return h(Card, null,
+      h(CatChips, { items: p.kids, subjects: subjects, catFn: kf, value: cat, onChange: function (c) { setCat(c); if (p.onCat) p.onCat(c); } }),
       h('input', { style: S.input, placeholder: '이름 또는 초성으로 찾기 (예: ㄱㅁㅈ)', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { style: Object.assign({ marginTop: 8, maxHeight: 190, overflowY: 'auto' }, S.row) }, kids.slice(0, 80).map(function (k) {
         var on = p.value === k.member_id;
@@ -278,6 +282,30 @@
           k.name, k.subject ? h('span', { style: { opacity: 0.7, fontWeight: 500 } }, ' · ' + k.subject) : null,
           p.sub && p.sub[k.member_id] ? h('div', { style: { fontSize: 10, fontWeight: 500, opacity: 0.85 } }, p.sub[k.member_id]) : null);
       }), !kids.length ? h('span', { style: S.mute }, p.kids && p.kids.length ? '찾는 학생이 없어요' : '명단이 비어 있어요. (출결·기록 > 설정 > 명단 동기화)') : null));
+  }
+
+  /* ───────── 과목(카테고리) ───────── */
+  var NONE_CAT = '미분류';
+  // 회원 과목 글자("재즈피아노", "취미 드럼", "미디작곡")를 설정의 과목("피아노", "드럼", "작곡·미디") 중 하나로 묶는다
+  function catOf(subjects, text) {
+    var t = String(text || '').replace(/\s/g, '');
+    if (!t) return NONE_CAT;
+    for (var i = 0; i < (subjects || []).length; i++) {
+      var parts = String(subjects[i]).split(/[·/,\s]+/).filter(Boolean);
+      if (parts.some(function (x) { return t.indexOf(x) >= 0; })) return subjects[i];
+    }
+    return NONE_CAT;
+  }
+  function CatChips(p) {
+    var counts = {}, total = 0;
+    (p.items || []).forEach(function (x) { var c = p.catFn(x); counts[c] = (counts[c] || 0) + 1; total++; });
+    var cats = (p.subjects || []).filter(function (c) { return counts[c]; });
+    if (counts[NONE_CAT]) cats.push(NONE_CAT);
+    if (cats.length < 2 && !p.always) return null;
+    return h('div', { style: Object.assign({ margin: '0 0 8px', overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: 2 }, S.row) },
+      [h('button', { key: '_all', type: 'button', style: p.value ? S.chip : S.chipOn, onClick: function () { p.onChange(''); } }, '전체 ' + total)].concat(cats.map(function (c) {
+        return h('button', { key: c, type: 'button', style: p.value === c ? S.chipOn : S.chip, onClick: function () { p.onChange(p.value === c ? '' : c); } }, c + ' ' + counts[c]);
+      })));
   }
 
   /* ───────── 교재 고르기 ───────── */
@@ -308,10 +336,14 @@
     var kid = (roster.data || []).filter(function (k) { return k.member_id === sel; })[0];
     var _e = useState(null), editing = _e[0], setEditing = _e[1];
     var _ver = useState(0), ver = _ver[0], setVer = _ver[1];
+    var _lc = useState(''), logCat = _lc[0], setLogCat = _lc[1];
     var logs = useQuery(function () {
       if (!kid) return Promise.resolve({ data: [] });
-      return sb().from('mm_lesson_log').select('*').eq('studio_id', kid.studio_id).eq('member_id', kid.member_id).order('lesson_date', { ascending: false }).limit(40);
+      return sb().from('mm_lesson_log').select('*').eq('studio_id', kid.studio_id).eq('member_id', kid.member_id).order('lesson_date', { ascending: false }).limit(120);
     }, [sel]);
+    var lcf = function (l) { return catOf(s.subjects, l.subject); };
+    var shown = (logs.data || []).filter(function (l) { return !logCat || lcf(l) === logCat; });
+    var byMonth = []; shown.forEach(function (l) { var m = (l.lesson_date || '').slice(0, 7); var g = byMonth[byMonth.length - 1]; if (!g || g.m !== m) byMonth.push(g = { m: m, rows: [] }); g.rows.push(l); });
     var allPhotos = []; (logs.data || []).forEach(function (l) { allPhotos = allPhotos.concat(l.photos || []); });
     function printLogs(range, size) {
       var since = range === 'week' ? mondayOf(kstDate()) : kstDate().slice(0, 7) + '-01';
@@ -325,12 +357,17 @@
       printHtml(kid.name + ' 레슨 기록', body, size);
     }
     return h('div', null,
-      h(KidPicker, { kids: roster.data, value: sel, onChange: function (v) { setSel(v); setEditing(null); } }),
+      h(KidPicker, { kids: roster.data, s: s, value: sel, onChange: function (v) { setSel(v); setEditing(null); } }),
       kid ? h(LogForm, { key: kid.member_id + (editing ? editing.id : 'new' + ver), kid: kid, a: a, s: s, editing: editing,
         onDone: function () { setEditing(null); setVer(ver + 1); logs.reload(); }, onCancel: function () { setEditing(null); } }) : null,
-      kid ? h(Card, { title: '기록 ' + (logs.data || []).length + '개' },
+      kid ? h(Card, { title: '📒 ' + kid.name + ' 레슨일지 ' + (logs.data || []).length + '개' },
         h(Msg, { text: tableHint(logs.err), err: true }),
-        (logs.data || []).map(function (l) {
+        h(CatChips, { items: logs.data, subjects: s.subjects, catFn: lcf, value: logCat, onChange: setLogCat }),
+        !shown.length && !logs.loading ? h('div', { style: S.mute }, '아직 레슨일지가 없어요. 위에서 첫 기록을 남겨 보세요.') : null,
+        byMonth.map(function (g) { return h('div', { key: g.m },
+          h('div', { style: { fontSize: 12, fontWeight: 800, color: C.pink, margin: '12px 0 2px', borderBottom: '2px solid ' + C.pink + '33', paddingBottom: 3 } },
+            Number(g.m.slice(0, 4)) + '년 ' + Number(g.m.slice(5)) + '월 · ' + g.rows.length + '회'),
+          g.rows.map(function (l) {
           return h('div', { key: l.id, style: { borderBottom: '1px solid ' + C.line, padding: '10px 0' } },
             h('div', { style: S.row }, h('b', null, md(l.lesson_date)), l.subject ? badge(l.subject, C.blue) : null,
               l.teacher_name ? h('span', { style: S.mute }, l.teacher_name + ' (학부모 비공개)') : null,
@@ -346,7 +383,7 @@
             l.improve ? h('div', { style: { fontSize: 13 } }, '📝 ' + l.improve) : null,
             Object.keys(l.ratings || {}).length ? h('div', { style: Object.assign({ marginTop: 4 }, S.row) }, Object.keys(l.ratings).map(function (k) { return h('span', { key: k, style: S.mute }, k + ' ' + l.ratings[k]); })) : null,
             h(Photos, { paths: l.photos, size: 56 }));
-        }),
+        })); }),
         allPhotos.length || (logs.data || []).length ? h('div', null,
           h(Label, null, '기록 인쇄'),
           h('div', { style: S.row },
@@ -357,7 +394,7 @@
   function LogForm(p) {
     var kid = p.kid, s = p.s, ed = p.editing;
     var _d = useState(ed ? ed.lesson_date : kstDate()), date = _d[0], setDate = _d[1];
-    var _sj = useState(ed ? ed.subject || '' : (kid.subject && s.subjects.indexOf(kid.subject) >= 0 ? kid.subject : '')), subject = _sj[0], setSubject = _sj[1];
+    var _sj = useState(ed ? ed.subject || '' : (catOf(s.subjects, kid.subject) !== NONE_CAT ? catOf(s.subjects, kid.subject) : '')), subject = _sj[0], setSubject = _sj[1];
     var _it = useState(ed ? (ed.items || []) : []), items = _it[0], setItems = _it[1];
     var _c = useState(blankItem()), cur = _c[0], setCur = _c[1];
     var _g = useState(ed ? ed.good || '' : ''), good = _g[0], setGood = _g[1];
@@ -389,11 +426,11 @@
         setMsg(''); p.onDone();
       }).catch(function (e) { setBusy(false); setMsg('저장하지 못했어요. 적은 내용은 그대로 있으니 인터넷을 확인하고 다시 눌러 주세요 (' + tableHint(errText(e)) + ')'); });
     }
-    return h(Card, { title: (ed ? '✏️ ' + md(ed.lesson_date) + ' 기록 고치기 · ' : '📝 레슨 기록 · ') + kid.name },
-      h('div', { style: S.row },
-        h('input', { type: 'date', style: Object.assign({}, S.input, { width: 'auto' }), value: date, onChange: function (e) { setDate(e.target.value); } }),
-        h('select', { style: Object.assign({}, S.input, { width: 'auto' }), value: subject, onChange: function (e) { setSubject(e.target.value); } },
-          h('option', { value: '' }, '과목'), s.subjects.map(function (x) { return h('option', { key: x, value: x }, x); }))),
+    return h(Card, { title: (ed ? '✏️ ' + md(ed.lesson_date) + ' 레슨일지 고치기 · ' : '📝 레슨일지 쓰기 · ') + kid.name },
+      h(Label, null, '언제'),
+      h('input', { type: 'date', style: Object.assign({}, S.input, { width: 'auto' }), value: date, onChange: function (e) { setDate(e.target.value); } }),
+      h(Label, null, '구분 (과목)'),
+      h(Chips, { items: s.subjects, value: subject, onChange: function (v) { setSubject(subject === v ? '' : v); setCur(Object.assign({}, cur, { book: '', vol: '' })); } }),
 
       h(Label, null, '교재와 진도 · 진도마다 고칠 점을 바로 아래에'),
       items.map(function (it, i) {
@@ -465,7 +502,7 @@
           : h('div', { style: S.row }, h('input', { type: 'date', style: Object.assign({}, S.input, { width: 'auto' }), value: weekV, onChange: function (e) { setWeekV(mondayOf(e.target.value)); } }), h('span', { style: S.mute }, md(key) + '(월) ~ ' + md(addDays(key, 6)) + '(일)')),
         h('div', { style: Object.assign({ marginTop: 6 }, S.mute) }, '아이를 누르면 목표 화면이 열려요. 정한 목표는 이름 아래에 보여요.'),
         h(Msg, { text: tableHint(all.err), err: true })),
-      h(KidPicker, { kids: roster.data, value: sel, onChange: setSel, sub: sub }),
+      h(KidPicker, { kids: roster.data, s: s, value: sel, onChange: setSel, sub: sub }),
       kid && !all.loading ? h(GoalForm, { key: kid.member_id + type + key + (byKid[kid.member_id] ? byKid[kid.member_id].updated_at : '-'), kid: kid, s: s, type: type, pkey: key, goal: byKid[kid.member_id], onSaved: all.reload }) : null,
       kid ? h(ContestCard, { key: 'c' + kid.member_id, kid: kid }) : null);
   }
@@ -670,7 +707,7 @@
     var _k = useState(''), sel = _k[0], setSel = _k[1];
     var kid = (roster.data || []).filter(function (k) { return k.member_id === sel; })[0];
     return h('div', null,
-      h(KidPicker, { kids: roster.data, value: sel, onChange: setSel }),
+      h(KidPicker, { kids: roster.data, s: s, value: sel, onChange: setSel }),
       kid ? h(FeedbackMaker, { key: kid.member_id, kid: kid, s: s }) : h('div', { style: S.mute }, '학생을 고르면 레슨 기록으로 학부모 글을 자동으로 만들어 드려요.'));
   }
   function FeedbackMaker(p) {

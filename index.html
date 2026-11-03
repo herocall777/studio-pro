@@ -346,14 +346,14 @@ var TODAY = function () {
 }();
 var SUPER_ADMIN_EMAIL = 'herocall1@gmail.com';
 var APP_STUDIOS_DEFAULT = [{
-  id: 'studio_pilates',
-  name: '오늘필라테스',
-  emoji: '🧘'
-}, {
-  id: 'studio_piano',
+  id: 'bf22d13a-fb07-4a76-b36a-5479140bcbbb',
   name: '오늘피아노보컬음악학원',
-  emoji: '🎹'
+  emoji: '🏫'
 }];
+// 앱에 보여 줄 학원: 실제로 회원 등록해 쓰는 학원(uuid)만. 예전 시험용 학원(studio_pilates 등)은 숨김
+function mmRealStudios(list) {
+  return (list || []).filter(function (s) { return s && /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(s.id)); });
+}
 var EMOJI_LIST = ['🧘', '🎹', '🎸', '🎵', '🎤', '🎺', '🎻', '🥁', '💪', '🏃', '🤸', '⚽', '🏊', '🎭', '📚', '✏️', '🎨', '🏫'];
 var HOUR_H = 80; // px per hour
 var SCHED_START = 7; // 07:00
@@ -27408,7 +27408,7 @@ function App() {
           case 1:
             _yield$from$select$or = _context21.v;
             data = _yield$from$select$or.data;
-            if (data && data.length > 0) setStudios(data);
+            if (data && mmRealStudios(data).length > 0) setStudios(mmRealStudios(data));
             _context21.n = 3;
             break;
           case 2:
@@ -27471,10 +27471,10 @@ function App() {
             _context23.n = 3;
             return (sb || getSb(sbUrl, sbKey)).from('studios').select('id').order('created_at', {
               ascending: true
-            }).limit(1);
+            }).limit(50);
           case 3:
             st = _context23.v;
-            firstId = (st === null || st === void 0 || (_st$data = st.data) === null || _st$data === void 0 || (_st$data = _st$data[0]) === null || _st$data === void 0 ? void 0 : _st$data.id) || APP_STUDIOS_DEFAULT[0].id;
+            firstId = (mmRealStudios(st && st.data)[0] || {}).id || APP_STUDIOS_DEFAULT[0].id;
             setActiveStudioId(firstId);
             cloudLoadedRef.current = true;
             loadFromCloud(firstId);
@@ -27525,10 +27525,10 @@ function App() {
             _context23.n = 8;
             return (sb || getSb(sbUrl, sbKey)).from('studios').select('id').order('created_at', {
               ascending: true
-            }).limit(1);
+            }).limit(50);
           case 8:
             _st = _context23.v;
-            _firstId = (_st === null || _st === void 0 || (_st$data2 = _st.data) === null || _st$data2 === void 0 || (_st$data2 = _st$data2[0]) === null || _st$data2 === void 0 ? void 0 : _st$data2.id) || APP_STUDIOS_DEFAULT[0].id;
+            _firstId = (mmRealStudios(_st && _st.data)[0] || {}).id || APP_STUDIOS_DEFAULT[0].id;
             setActiveStudioId(_firstId);
             cloudLoadedRef.current = true;
             loadFromCloud(_firstId);
@@ -28095,7 +28095,7 @@ function App() {
   };
 
   // ── 이용약관 동의 전 차단 화면 ──
-  if (!termsAgreed) {
+  if (!termsAgreed && !account && (authView === 'signup' || authView === 'studio-code')) {
     return /*#__PURE__*/React.createElement(TermsAgreementScreen, {
       onAgree: agreeTerms
     });
@@ -28356,12 +28356,15 @@ function App() {
         color: '#fff'
       }
     }, a.avatar, " ", a.name);
-  })), (account === null || account === void 0 ? void 0 : account.role) === '슈퍼어드민' && /*#__PURE__*/React.createElement("select", {
+  })), ((account === null || account === void 0 ? void 0 : account.role) === '슈퍼어드민' || (account === null || account === void 0 ? void 0 : account._devSwitch)) && /*#__PURE__*/React.createElement("select", {
     value: activeStudioId,
+    title: '이 학원으로 들어가기',
     onChange: function onChange(e) {
       setActiveStudioId(e.target.value);
       cloudLoadedRef.current = false;
       loadFromCloud(e.target.value);
+      if ((account === null || account === void 0 ? void 0 : account.role) === '슈퍼어드민') setSuperAdminViewMode(true);
+      setPage('schedule');
     },
     style: {
       background: 'rgba(255,255,255,0.08)',
