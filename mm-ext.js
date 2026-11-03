@@ -1,4 +1,4 @@
-/* ScheduleMate 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한
+/* ScheduleMate 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한 · 성장노트 연결(mm-note.js)
  * 의존: React(전역), getSb()(index.html), phoneToEmail()(index.html), mm-config.js
  * 모든 데이터는 새 테이블(mm_*)에 저장되며 권한은 서버(RLS)가 판단합니다. */
 (function () {
@@ -160,7 +160,7 @@
       }, 4000);
       return function () { clearTimeout(t); };
     }, [sig, a && a.studioId]);
-    return null;
+    return window.MMLock && a ? h(window.MMLock, { account: a }) : null;
   }
 
   /* ───────── 데이터 로더 ───────── */
@@ -204,6 +204,7 @@
       })) : null,
       h(AttendancePanel, { kid: kid, canScan: isStu, account: a }),
       isStu ? h(PracticePanel, { kid: kid }) : null,
+      window.MMNoteParent ? h(window.MMNoteParent, { kid: kid, key: 'note' + kid.member_id }) : null,
       h(KidTimeline, { kid: kid, showPractice: !isStu }),
       h(Card, { title: '알림' }, h(PushButton, { email: a.email })));
   }
@@ -308,6 +309,7 @@
   function MMBoard(props) {
     var a = props.account, _t = useState('today'), tab = _t[0], setTab = _t[1];
     var tabs = [['today', '오늘 현황'], ['student', '학생별 기록'], ['lesson', '수업 녹음·요약']];
+    if (window.MMNoteBoard) tabs.push(['note', '📒 성장노트']);
     if (isAdmin(a)) tabs.push(['settings', '설정']);
     return h('div', { style: S.wrap },
       h('h2', { style: S.h2 }, '출결 · 기록'),
@@ -315,6 +317,7 @@
       tab === 'today' ? h(TodayBoard, { account: a }) : null,
       tab === 'student' ? h(StudentRecords, { account: a }) : null,
       tab === 'lesson' ? h(LessonPanel, { account: a }) : null,
+      tab === 'note' && window.MMNoteBoard ? h(window.MMNoteBoard, { account: a, members: props.members, instructors: props.instructors }) : null,
       tab === 'settings' && isAdmin(a) ? h(SettingsPanel, props) : null);
   }
 

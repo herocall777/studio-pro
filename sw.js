@@ -1,11 +1,12 @@
-// ScheduleMate — Service Worker v4.0 (push)
-const CACHE = 'scheduleMate-v4';
+// ScheduleMate — Service Worker v5.0 (push · 성장노트)
+const CACHE = 'scheduleMate-v5';
 const STATIC = [
   '/',
   '/index.html',
   '/manifest.json',
   '/mm-config.js',
   '/mm-ext.js',
+  '/mm-note.js',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
