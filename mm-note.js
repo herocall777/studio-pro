@@ -257,7 +257,16 @@
   }
 
   /* ───────── 학생 고르기 (이름·초성 검색) ───────── */
-  function useRoster() { return useQuery(function () { return sb().from('mm_roster').select('*').eq('active', true).order('name'); }, []); }
+  function useRoster(studio) {
+    // 로그인 정보가 늦게 붙어 첫 조회가 비면 잠시 뒤 한 번 더 불러온다
+    var q = useQuery(function () { var x = sb().from('mm_roster').select('*').eq('active', true); if (studio) x = x.eq('studio_id', studio); return x.order('name'); }, [studio]);
+    var tried = useRef(false);
+    useEffect(function () {
+      if (q.loading || tried.current || (q.data && q.data.length)) return;
+      tried.current = true; var t = setTimeout(q.reload, 1500); return function () { clearTimeout(t); };
+    }, [q.loading, q.data]);
+    return q;
+  }
   function KidPicker(p) {
     var _q = useState(''), q = _q[0], setQ = _q[1];
     var kids = (p.kids || []).filter(function (k) { return nameMatch(k.name, q); });
@@ -905,7 +914,7 @@
   function MMNoteBoard(p) {
     var a = p.account, studio = String(a.studioId);
     var st = useSettings(studio);
-    var roster = useRoster();
+    var roster = useRoster(studio);
     var _t = useState('log'), tab = _t[0], setTab = _t[1];
     var tabs = [['log', '레슨일지 쓰기'], ['goal', '목표'], ['newbook', '새 책'], ['feedback', '학부모 글']];
     if (isAdmin(a)) tabs.push(['settings', '일지 설정']); else tabs.push(['settings', '🔒 잠금']);
