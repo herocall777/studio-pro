@@ -1,4 +1,4 @@
-/* ScheduleMate 성장노트: 레슨 기록 · 목표(월/주/콩쿨) · 새 책 시작 · 학부모 피드백 글 · 인쇄 · 엑셀 · 폰 잠금
+/* ScheduleMate 레슨일지(구 성장노트): 레슨 기록 · 목표(월/주/콩쿨) · 새 책 시작 · 학부모 피드백 글 · 인쇄 · 엑셀 · 폰 잠금
  * 의존: React(전역), getSb()(index.html), mm-ext.js 보다 먼저/나중 어느 쪽이든 로드 가능
  * 데이터: mm_note_settings · mm_lesson_log · mm_goal · mm_newbook · mm_feedback · 저장소 mm-note-media (009_growth_note.sql)
  * 권한은 서버(RLS)가 판단합니다. */
@@ -60,7 +60,7 @@
   }
   function tableHint(err) {
     return /relation|does not exist|schema cache|mm_note|mm_lesson|mm_goal|mm_newbook|mm_feedback/i.test(err || '')
-      ? '성장노트 표가 아직 없습니다. Supabase SQL Editor에서 009_growth_note.sql 을 실행해 주세요.' : err;
+      ? '레슨일지 표가 아직 없습니다. Supabase SQL Editor에서 009_growth_note.sql 을 실행해 주세요.' : err;
   }
 
   /* ───────── 초성 검색 ───────── */
@@ -771,7 +771,7 @@
           h('button', { type: 'button', style: Object.assign({}, S.btn2, { padding: '2px 8px' }), onClick: function () { put(key, s[key].filter(function (_, j) { return j !== i; })); } }, '삭제'));
       });
     }
-    if (!isAdmin(a)) return h(Card, null, h('div', { style: S.mute }, '성장노트 설정은 원장·실장만 바꿀 수 있어요.'), h(LockCard, null));
+    if (!isAdmin(a)) return h(Card, null, h('div', { style: S.mute }, '레슨일지 설정은 원장·실장만 바꿀 수 있어요.'), h(LockCard, null));
     return h('div', null,
       h(Card, { title: '🏫 학원 이름 · 과목' },
         h('input', { style: S.input, placeholder: '학원 이름 (학부모 글 첫 줄에 들어가요)', value: s.academyName || '', onChange: function (e) { put('academyName', e.target.value); } }),
@@ -901,13 +901,14 @@
         onClick: function () { setPinStore(''); var c = sb(); (c ? c.auth.signOut() : Promise.resolve()).then(function () { location.reload(); }); } }, '번호를 잊었어요 (로그아웃 후 다시 로그인)'));
   }
 
-  /* ═════════ 운영자·강사 화면: 성장노트 ═════════ */
+  /* ═════════ 운영자·강사 화면: 레슨일지 ═════════ */
   function MMNoteBoard(p) {
     var a = p.account, studio = String(a.studioId);
     var st = useSettings(studio);
     var roster = useRoster();
     var _t = useState('log'), tab = _t[0], setTab = _t[1];
-    var tabs = [['log', '레슨 기록'], ['goal', '목표'], ['newbook', '새 책'], ['feedback', '학부모 글'], ['settings', '노트 설정']];
+    var tabs = [['log', '레슨일지 쓰기'], ['goal', '목표'], ['newbook', '새 책'], ['feedback', '학부모 글']];
+    if (isAdmin(a)) tabs.push(['settings', '일지 설정']); else tabs.push(['settings', '🔒 잠금']);
     return h('div', null,
       h(Chips, { items: tabs, value: tab, onChange: setTab }),
       st.err ? h(Card, null, h(Msg, { text: tableHint(st.err), err: true })) : null,
@@ -938,7 +939,7 @@
     }
     var hasGoal = goalBox(gm, '') || goalBox(gw, '') || (ct && ct.name);
     return h('div', null,
-      h(Card, { title: '✉️ 선생님이 보낸 레슨 소식' },
+      h(Card, { title: '✉️ 선생님이 보낸 레슨일지' },
         (fb.data || []).length ? (fb.data || []).map(function (f, i) {
           var on = open === i;
           return h('div', { key: f.id, style: { borderBottom: '1px solid ' + C.line, padding: '8px 0' } },
@@ -948,7 +949,7 @@
               h('div', { style: { fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.7, marginTop: 6 } }, f.body),
               f.chart ? h('div', { style: { marginTop: 8 } }, h(Chart, { data: f.chart })) : null,
               h(Photos, { paths: f.photos, size: 96 })) : null);
-        }) : h('div', { style: S.mute }, fb.loading ? '불러오는 중…' : '아직 올라온 소식이 없어요')),
+        }) : h('div', { style: S.mute }, fb.loading ? '불러오는 중…' : '아직 올라온 레슨일지가 없어요')),
       hasGoal ? h(Card, { title: '🎯 이번 목표' },
         goalBox(gm, Number(month.slice(5)) + '월 목표'), goalBox(gw, '이번 주 목표'),
         ct && ct.name ? h('div', { style: { fontSize: 13, background: C.soft, borderRadius: 8, padding: 8 } },

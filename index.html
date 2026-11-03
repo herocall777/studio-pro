@@ -929,6 +929,22 @@ var initPermSettings = function initPermSettings() {
     },
     canViewAllMembers: {
       원장: true,
+      실장: false,
+      강사: false
+    },
+    // 레슨일지·수강생 관리
+    canViewLessonNotes: {
+      원장: true,
+      실장: true,
+      강사: true
+    },
+    canAddMember: {
+      원장: true,
+      실장: true,
+      강사: false
+    },
+    canEditMember: {
+      원장: true,
       실장: true,
       강사: false
     },
@@ -4717,6 +4733,7 @@ function ClassDetailModal(_ref16) {
   });
   // 메모 편집: 역할이 강사/운영자이고 해당 수업에 권한이 있을 때
   var canEdit = canEditClass !== undefined ? canEditClass : ['원장', '실장', '강사'].includes(account === null || account === void 0 ? void 0 : account.role);
+  var __mmShowContent = window.mmCanSeeLessonContent ? window.mmCanSeeLessonContent(account, cls, instructors) : true;
 
   // 로컬 노트 상태 (저장 전 편집용)
   var _useState19 = useState(function () {
@@ -5015,7 +5032,7 @@ function ClassDetailModal(_ref16) {
       opacity: .8,
       fontWeight: 700
     }
-  }, instPayDetails.monthPay.toLocaleString(), "\uC6D0 \uB204\uC801")))), ['원장', '강사'].includes(account === null || account === void 0 ? void 0 : account.role) && /*#__PURE__*/React.createElement("div", {
+  }, instPayDetails.monthPay.toLocaleString(), "\uC6D0 \uB204\uC801")))), __mmShowContent && ['원장', '강사'].includes(account === null || account === void 0 ? void 0 : account.role) && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 16,
       borderRadius: 12,
@@ -5057,7 +5074,18 @@ function ClassDetailModal(_ref16) {
     members: members,
     geminiKey: geminiKey,
     onSaveAiNote: saveAiNote
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), !__mmShowContent && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 14,
+      borderRadius: 10,
+      background: '#f9fafb',
+      border: '1px solid var(--border)',
+      fontSize: 13,
+      color: 'var(--muted)'
+    }
+  }, "\uD83D\uDD12 \uB2F4\uB2F9 \uC218\uC5C5\uC774 \uC544\uB2C8\uB77C \uC218\uC5C5 \uB0B4\uC6A9\uC740 \uC228\uACA8\uC838 \uC788\uC5B4\uC694 (\uC6D0\uC7A5\uB2D8 \uAD8C\uD55C \uC124\uC815)", /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: 6, color: 'var(--text)' }
+  }, "\uC218\uAC15\uC0DD: ", cls.enrolled.map(function (mid) { var mm = members.find(function (x) { return x.id === mid; }); return mm ? mm.name : ''; }).filter(Boolean).join(', ') || '-')), __mmShowContent && /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       fontSize: 13,
@@ -5078,14 +5106,14 @@ function ClassDetailModal(_ref16) {
       color: 'var(--acc)',
       fontWeight: 400
     }
-  }, "\u2014 \uC77D\uAE30 \uC804\uC6A9")), cls.enrolled.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "\u2014 \uC77D\uAE30 \uC804\uC6A9")), __mmShowContent && cls.enrolled.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       padding: 24,
       color: 'var(--muted)',
       fontSize: 13
     }
-  }, "\uC218\uAC15 \uD559\uC0DD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"), /*#__PURE__*/React.createElement("div", {
+  }, "\uC218\uAC15 \uD559\uC0DD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"), __mmShowContent && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -5379,7 +5407,7 @@ function ClassDetailModal(_ref16) {
         color: 'var(--muted)'
       }
     }, "\xB7 ", saved.updatedAt)))));
-  })), classFiles && setClassFiles && /*#__PURE__*/React.createElement(ClassMaterialsSection, {
+  })), __mmShowContent && classFiles && setClassFiles && /*#__PURE__*/React.createElement(ClassMaterialsSection, {
     cls: cls,
     classFiles: classFiles,
     setClassFiles: setClassFiles,
@@ -9664,6 +9692,10 @@ function Members(_ref28) {
     pendingLoading = _useState106[0],
     setPendingLoading = _useState106[1];
   var isInstructor = (account === null || account === void 0 ? void 0 : account.role) === '강사';
+  var mmRole = account === null || account === void 0 ? void 0 : account.role;
+  var mmPermOf = function (k) { var v = permSettings && permSettings[k] && permSettings[k][mmRole]; if (v === undefined) { var d = initPermSettings()[k]; v = d ? d[mmRole] : true; } return mmRole === '원장' || mmRole === '슈퍼어드민' ? true : v !== false; };
+  var canAddMember = mmPermOf('canAddMember');
+  var canEditMember = mmPermOf('canEditMember');
   var canViewPhone = !permSettings || ((_permSettings$canView = permSettings.canViewMemberPhone) === null || _permSettings$canView === void 0 ? void 0 : _permSettings$canView[account === null || account === void 0 ? void 0 : account.role]) !== false;
   var canViewAll = !permSettings || ((_permSettings$canView2 = permSettings.canViewAllMembers) === null || _permSettings$canView2 === void 0 ? void 0 : _permSettings$canView2[account === null || account === void 0 ? void 0 : account.role]) !== false;
 
@@ -9792,11 +9824,15 @@ function Members(_ref28) {
   }
 
   // 강사 계정: 본인 담당 회원만
-  var myPassMemberIds = isInstructor && !canViewAll ? passes.filter(function (p) {
-    return p.instructorId === (account === null || account === void 0 ? void 0 : account.id);
+  var mmMyInstIds = function () {
+    var nm = ((account && account.name) || '').replace(/ \(.*\)/, ''), ph = ((account && account.phone) || '').replace(/\D/g, '');
+    return [account && account.id].concat((instructors || []).filter(function (i) { return (nm && i.name === nm) || (ph && (i.phone || '').replace(/\D/g, '') === ph); }).map(function (i) { return i.id; })).filter(Boolean);
+  }();
+  var myPassMemberIds = (isInstructor || mmRole === '실장') && !canViewAll ? passes.filter(function (p) {
+    return mmMyInstIds.indexOf(p.instructorId) >= 0;
   }).map(function (p) {
     return p.memberId;
-  }) : null;
+  }).concat(members.filter(function (m) { return mmMyInstIds.indexOf(m.instructorId) >= 0; }).map(function (m) { return m.id; })) : null;
   var FILTER_PILL_M = {
     padding: '5px 12px',
     fontSize: 11,
@@ -9880,6 +9916,7 @@ function Members(_ref28) {
     setShowModal(true);
   }
   function openEdit(m) {
+    if (!canEditMember) return;
     setEditMember(m);
     setShowModal(true);
   }
@@ -9966,7 +10003,7 @@ function Members(_ref28) {
       }
     }, "\u2190 \uD68C\uC6D0 \uBAA9\uB85D")), /*#__PURE__*/React.createElement(MemberDetailTabs, {
       member: m,
-      lessonNotes: lessonNotes || [],
+      lessonNotes: mmPermOf('canViewLessonNotes') || mmMyInstIds.indexOf(m.instructorId) >= 0 ? lessonNotes || [] : [],
       instructors: instructors,
       allClasses: classes || [],
       account: account,
@@ -10439,7 +10476,7 @@ function Members(_ref28) {
     onClose: function onClose() {
       return setAppModal(null);
     }
-  }), !isInstructor && /*#__PURE__*/React.createElement("button", {
+  }), canAddMember && /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary",
     onClick: openAdd
   }, "+ \uD68C\uC6D0 \uB4F1\uB85D"))), /*#__PURE__*/React.createElement("div", {
@@ -16568,7 +16605,19 @@ var PERM_LABELS = {
   },
   canViewAllMembers: {
     label: '전체 회원 열람',
-    desc: '담당 외 회원도 확인'
+    desc: '끄면 담당 학생만 보임 (회원·출결·레슨일지)'
+  },
+  canViewLessonNotes: {
+    label: '레슨일지·수업 내용 열람',
+    desc: '끄면 스케줄은 보되 남의 수업 내용·레슨일지는 숨김'
+  },
+  canAddMember: {
+    label: '수강생 등록',
+    desc: '새 회원 등록'
+  },
+  canEditMember: {
+    label: '수강생 정보 수정',
+    desc: '회원 정보 수정'
   },
   canAccessRevenue: {
     label: '매출 관리 접근',
@@ -20856,14 +20905,14 @@ var NAV_GROUPS = [
 }, {
   type: 'item',
   id: 'mm-student',
-  label: '내 출결·기록',
-  icon: '📲',
+  label: '레슨일지',
+  icon: '📒',
   roles: ['학생', '학부모']
 }, {
   type: 'item',
   id: 'mm-board',
-  label: '출결·기록',
-  icon: '🕘',
+  label: '레슨일지·출결',
+  icon: '📒',
   roles: ['원장', '실장', '강사']
 }, {
   type: 'item',
@@ -27747,7 +27796,7 @@ function App() {
             if ((_d$rooms = d.rooms) !== null && _d$rooms !== void 0 && _d$rooms.length) setRooms(d.rooms);
             if ((_d$classTypes = d.classTypes) !== null && _d$classTypes !== void 0 && _d$classTypes.length) setClassTypes(d.classTypes);
             if (d.lateSettings) setLateSettings(d.lateSettings);
-            if (d.permSettings) setPermSettings(d.permSettings);
+            if (d.permSettings) setPermSettings(function () { var base = initPermSettings(); Object.keys(d.permSettings).forEach(function (k) { base[k] = Object.assign({}, base[k] || {}, d.permSettings[k]); }); return base; });
             if (d.smsSettings) setSmsSettings(d.smsSettings);
             if (d.bookingSettings) setBookingSettings(d.bookingSettings);
             if ((_d$managerTasks = d.managerTasks) !== null && _d$managerTasks !== void 0 && _d$managerTasks.length) setManagerTasks(d.managerTasks);
@@ -28843,6 +28892,7 @@ function App() {
     account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId })
   }), page === 'mm-board' && window.MMBoard && /*#__PURE__*/React.createElement(window.MMBoard, {
     account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
+    permSettings: permSettings,
     members: members,
     instructors: instructors,
     setMembers: setMembers,
@@ -28850,6 +28900,7 @@ function App() {
     setInstructors: setInstructors
   }), window.MMGlobal && /*#__PURE__*/React.createElement(window.MMGlobal, {
     account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
+    permSettings: permSettings,
     setPage: setPage,
     members: members,
     instructors: instructors

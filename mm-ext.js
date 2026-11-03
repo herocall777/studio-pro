@@ -1,4 +1,4 @@
-/* ScheduleMate 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한 · 성장노트 연결(mm-note.js)
+/* ScheduleMate 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한 · 레슨일지 연결(mm-note.js) · 역할별 권한
  * 의존: React(전역), getSb()(index.html), phoneToEmail()(index.html), mm-config.js
  * 모든 데이터는 새 테이블(mm_*)에 저장되며 권한은 서버(RLS)가 판단합니다. */
 (function () {
@@ -16,6 +16,29 @@
   function mail(phone) { return phone && window.phoneToEmail ? window.phoneToEmail(phone).toLowerCase() : null; }
   function isAdmin(a) { return a && (a.role === '원장' || a.role === '실장' || a.role === '슈퍼어드민'); }
   function isOwner(a) { return a && (a.role === '원장' || a.role === '슈퍼어드민'); }
+  /* ───────── 권한표 (설정 > 권한 체크리스트) ───────── */
+  function mmPerm(key, role) {
+    if (role === '원장' || role === '슈퍼어드민') return true;
+    var ps = window.__mmPerm || {}, v = ps[key] && ps[key][role];
+    if (v === undefined && typeof window.initPermSettings === 'function') { var d = window.initPermSettings()[key]; v = d ? d[role] : undefined; }
+    return v !== false;
+  }
+  window.mmPerm = mmPerm;
+  // 스케줄 수업 상세에서 수업 내용(레슨 메모·AI 분석·자료)을 보여 줄지
+  window.mmCanSeeLessonContent = function (a, cls, instructors) {
+    var role = a && a.role;
+    if (role !== '실장' && role !== '강사') return true;
+    if (mmPerm('canViewLessonNotes', role)) return true;
+    var nm = ((a && a.name) || '').replace(/ \(.*\)/, '');
+    var mine = [a && a.id].concat((instructors || []).filter(function (i) { return nm && i.name === nm; }).map(function (i) { return i.id; }));
+    return !!(cls && mine.indexOf(cls.instructorId) >= 0);
+  };
+  function syncRoster(studio, rows) {
+    return sb().rpc('mm_roster_sync', { p_studio: studio, p_rows: rows }).then(function (r) {
+      if (r.error && /function|schema cache|does not exist/i.test(r.error.message || '')) return sb().from('mm_roster').upsert(rows, { onConflict: 'studio_id,member_id' });
+      return r;
+    });
+  }
   function errText(e) { return (e && (e.message || e.error_description || e.msg)) || String(e || '알 수 없는 오류'); }
 
   var C = { bg: '#fff', line: '#e5e7eb', mute: '#6b7280', pink: '#E07B8B', green: '#10b981', amber: '#f59e0b', red: '#ef4444', ink: '#111827', soft: '#f9fafb' };
@@ -128,6 +151,15 @@
   /* ───────── 앱 전역: 이탈 기록 · QR 딥링크 ───────── */
   function MMGlobal(props) {
     var a = props.account;
+    window.__mmPerm = props.permSettings || window.__mmPerm;
+    var permSig = JSON.stringify(['canViewAllMembers', 'canViewLessonNotes'].map(function (k) { return [mmPerm(k, '실장'), mmPerm(k, '강사')]; }));
+    useEffect(function () {
+      if (!a || (a.role !== '원장' && a.role !== '슈퍼어드민') || !a.studioId || !sb() || !props.permSettings) return;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(a.studioId))) return;
+      var rows = ['실장', '강사'].map(function (r) { return { studio_id: String(a.studioId), role: r, view_all: mmPerm('canViewAllMembers', r), view_notes: mmPerm('canViewLessonNotes', r), updated_at: new Date().toISOString() }; });
+      var t = setTimeout(function () { sb().from('mm_role_perm').upsert(rows, { onConflict: 'studio_id,role' }).then(function () {}, function () {}); }, 1500);
+      return function () { clearTimeout(t); };
+    }, [permSig, a && a.studioId, a && a.role]);
     useEffect(function () {
       try {
         var p = new URLSearchParams(location.search);
@@ -156,7 +188,7 @@
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(a.studioId))) return;   // 실제 학원(uuid)만
       var t = setTimeout(function () {
         var rows = rosterRows(String(a.studioId), props.members, props.instructors);
-        sb().from('mm_roster').upsert(rows, { onConflict: 'studio_id,member_id' }).then(function () {}, function () {});
+        syncRoster(String(a.studioId), rows).then(function () {}, function () {});
       }, 4000);
       return function () { clearTimeout(t); };
     }, [sig, a && a.studioId]);
@@ -198,13 +230,13 @@
     if (roster.err) return h('div', { style: S.wrap }, h(Card, null, h(Msg, { text: roster.err, err: true })));
     if (!kid) return h('div', { style: S.wrap }, h(Card, { title: '아직 연결된 학생이 없어요' }, h('div', { style: S.mute }, '학원에 학생·학부모 연락처 등록을 요청해 주세요. (등록 후 운영자가 "명단 동기화"를 실행하면 보입니다)')));
     return h('div', { style: S.wrap },
-      h('h2', { style: S.h2 }, isStu ? '내 기록' : '우리 아이 기록'),
+      h('h2', { style: S.h2 }, isStu ? '📒 내 레슨일지' : '📒 우리 아이 레슨일지'),
       kids.length > 1 ? h('div', { style: Object.assign({ marginBottom: 12 }, S.row) }, kids.map(function (k) {
         return h('button', { key: k.member_id, style: k.member_id === kid.member_id ? S.btn : S.btn2, onClick: function () { setSel(k.member_id); } }, k.name);
       })) : null,
+      window.MMNoteParent ? h(window.MMNoteParent, { kid: kid, key: 'note' + kid.member_id }) : null,
       h(AttendancePanel, { kid: kid, canScan: isStu, account: a }),
       isStu ? h(PracticePanel, { kid: kid }) : null,
-      window.MMNoteParent ? h(window.MMNoteParent, { kid: kid, key: 'note' + kid.member_id }) : null,
       h(KidTimeline, { kid: kid, showPractice: !isStu }),
       h(Card, { title: '알림' }, h(PushButton, { email: a.email })));
   }
@@ -307,17 +339,17 @@
 
   /* ───────── 운영자·강사 화면 ───────── */
   function MMBoard(props) {
-    var a = props.account, _t = useState('today'), tab = _t[0], setTab = _t[1];
-    var tabs = [['today', '오늘 현황'], ['student', '학생별 기록'], ['lesson', '수업 녹음·요약']];
-    if (window.MMNoteBoard) tabs.push(['note', '📒 성장노트']);
+    var a = props.account, _t = useState(window.MMNoteBoard ? 'note' : 'today'), tab = _t[0], setTab = _t[1];
+    var tabs = [['today', '오늘 출결'], ['student', '학생별 기록'], ['lesson', '수업 녹음·요약']];
+    if (window.MMNoteBoard) tabs.unshift(['note', '📒 레슨일지']);
     if (isAdmin(a)) tabs.push(['settings', '설정']);
     return h('div', { style: S.wrap },
-      h('h2', { style: S.h2 }, '출결 · 기록'),
+      h('h2', { style: S.h2 }, '레슨일지 · 출결'),
       h(Tabs, { items: tabs, value: tab, onChange: setTab }),
       tab === 'today' ? h(TodayBoard, { account: a }) : null,
       tab === 'student' ? h(StudentRecords, { account: a }) : null,
       tab === 'lesson' ? h(LessonPanel, { account: a }) : null,
-      tab === 'note' && window.MMNoteBoard ? h(window.MMNoteBoard, { account: a, members: props.members, instructors: props.instructors }) : null,
+      tab === 'note' && window.MMNoteBoard ? h(window.MMNoteBoard, { account: a, members: props.members, instructors: props.instructors, permSettings: props.permSettings }) : null,
       tab === 'settings' && isAdmin(a) ? h(SettingsPanel, props) : null);
   }
 
@@ -669,7 +701,7 @@
       var rows = rosterRows(props.studio, props.members, props.instructors);
       if (!rows.length) { setBad(true); return setMsg('동기화할 회원이 없습니다'); }
       setBad(false); setMsg('동기화 중…');
-      sb().from('mm_roster').upsert(rows, { onConflict: 'studio_id,member_id' }).then(function (r) {
+      syncRoster(props.studio, rows).then(function (r) {
         if (r.error) { setBad(true); setMsg(errText(r.error)); } else setMsg(rows.length + '명 동기화 완료');
       });
     }
