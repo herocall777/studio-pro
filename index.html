@@ -192,6 +192,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
 .sched-day-col{flex:1;border-right:1px solid #f1f5f9;min-width:0;position:relative}
 .sched-day-col:last-child{border-right:none}
 .sched-day-header{height:52px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafafa;font-size:12px;gap:2px}
+.sched-day-header{position:sticky;top:0;z-index:30;box-shadow:0 1px 0 var(--border)}
+.sched-time-header{position:sticky;top:0;z-index:40}
+.sched-day-header.today{background:var(--brand-soft)}
 .sched-day-header.today{background:var(--brand-soft)}
 .sched-day-num{font-size:20px;font-weight:800;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .sched-day-header.today .sched-day-num{background:var(--brand);color:#fff}
