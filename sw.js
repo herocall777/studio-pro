@@ -1,5 +1,5 @@
 // TodayNote — Service Worker v5.0 (push · 성장노트)
-const CACHE = 'todayNote-v8';
+const CACHE = 'todayNote-v9';
 const STATIC = [
   '/',
   '/index.html',
