@@ -1,4 +1,4 @@
-/* ScheduleMate 레슨일지(구 성장노트): 레슨 기록 · 목표(월/주/콩쿨) · 새 책 시작 · 학부모 피드백 글 · 인쇄 · 엑셀 · 폰 잠금
+/* TodayNote 레슨일지(구 성장노트): 레슨 기록 · 목표(월/주/콩쿨) · 새 책 시작 · 학부모 피드백 글 · 인쇄 · 엑셀 · 폰 잠금
  * 의존: React(전역), getSb()(index.html), mm-ext.js 보다 먼저/나중 어느 쪽이든 로드 가능
  * 데이터: mm_note_settings · mm_lesson_log · mm_goal · mm_newbook · mm_feedback · 저장소 mm-note-media (009_growth_note.sql)
  * 권한은 서버(RLS)가 판단합니다. */

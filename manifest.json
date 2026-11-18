@@ -1,7 +1,7 @@
 {
-  "name": "ScheduleMate – 학원 통합 관리",
-  "short_name": "ScheduleMate",
-  "description": "음악·필라테스 학원을 위한 통합 관리 앱",
+  "name": "TodayNote – 음악 · 스케줄관리",
+  "short_name": "TodayNote",
+  "description": "음악 · 스케줄관리 앱",
   "start_url": "/studio-pro/",
   "scope": "/studio-pro/",
   "display": "standalone",

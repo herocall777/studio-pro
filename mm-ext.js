@@ -1,4 +1,4 @@
-/* ScheduleMate 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한 · 레슨일지 연결(mm-note.js) · 역할별 권한
+/* TodayNote 확장: 등원/하원 · 연습/수업 녹음 · AI 요약 · 앱 이탈 기록 · 푸시 · 강사 권한 · 레슨일지 연결(mm-note.js) · 역할별 권한
  * 의존: React(전역), getSb()(index.html), phoneToEmail()(index.html), mm-config.js
  * 모든 데이터는 새 테이블(mm_*)에 저장되며 권한은 서버(RLS)가 판단합니다. */
 (function () {

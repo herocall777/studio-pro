@@ -1,5 +1,5 @@
-// ScheduleMate — Service Worker v5.0 (push · 성장노트)
-const CACHE = 'scheduleMate-v7';
+// TodayNote — Service Worker v5.0 (push · 성장노트)
+const CACHE = 'todayNote-v8';
 const STATIC = [
   '/',
   '/index.html',
@@ -79,7 +79,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: '알림', body: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'ScheduleMate', {
+  e.waitUntil(self.registration.showNotification(d.title || 'TodayNote', {
     body: d.body || '',
     icon: '/studio-pro/icons/icon-192.png',
     badge: '/studio-pro/icons/icon-192.png',

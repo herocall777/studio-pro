@@ -1,6 +1,6 @@
 <!--
   ╔══════════════════════════════════════════════════════════════════╗
-  ║              StudioPro · ScheduleMate  v1.0.0                  ║
+  ║              StudioPro · TodayNote  v1.0.0                  ║
   ║──────────────────────────────────────────────────────────────────║
   ║  Copyright © 2026 Woong Kim.  All Rights Reserved.             ║
   ║  Developed & Owned by Woong Kim  <herocall1@gmail.com>         ║
@@ -28,14 +28,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<title>ScheduleMate – 학원 통합 관리</title>
-<meta name="application-name" content="ScheduleMate"/>
-<meta name="description" content="음악·필라테스 학원을 위한 통합 관리 앱 — 스케줄, 회원, 수강권, 강사 페이를 한 곳에서"/>
+<title>TodayNote – 음악 · 스케줄관리</title>
+<meta name="application-name" content="TodayNote"/>
+<meta name="description" content="음악 · 스케줄관리 앱 — 스케줄, 회원, 수강권, 출결, 수업기록을 한 곳에서"/>
 <meta name="theme-color" content="#e11d48"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="오늘피아노보컬음악학원"/>
-<meta property="og:title" content="오늘피아노보컬음악학원 앱"/>
-<meta property="og:description" content="출결 · 수업기록 · 연습녹음을 앱에서 확인하세요. 학생·학부모 가입하기"/>
+<meta property="og:title" content="TodayNote · 오늘피아노보컬음악학원"/>
+<meta property="og:description" content="음악 · 스케줄관리 — 출결 · 수업기록 · 연습녹음을 앱에서 확인하세요"/>
 <meta property="og:url" content="https://herocall777.github.io/studio-pro/"/>
 <meta property="og:image" content="https://herocall777.github.io/studio-pro/icons/og.png"/>
 <meta property="og:image:width" content="1200"/>
@@ -45,7 +45,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="ScheduleMate"/>
+<meta name="apple-mobile-web-app-title" content="TodayNote"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icons/icon.svg"/>
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg"/>
@@ -15034,7 +15034,7 @@ function StudioCodeSettings(_ref48) {
     return _saveCode.apply(this, arguments);
   }
   var APP_URL = location.origin + location.pathname;
-  var kakaoMsg = "\uC548\uB155\uD558\uC138\uC694! \uD83D\uDCF1 ScheduleMate \uC571\uC73C\uB85C \uC218\uC5C5\uC744 \uAD00\uB9AC\uD558\uAC8C \uB410\uC5B4\uC694.\n\n\uC571 \uC8FC\uC18C: ".concat(APP_URL, "\n\uD83C\uDFEB \uD559\uC6D0 \uCF54\uB4DC: ").concat(code || '(설정 중)', "\n\n\u2192 \uC571 \uC811\uC18D \uD6C4 \"\uD83C\uDFEB \uCF54\uB4DC\uB85C \uAC00\uC785\" \uD0ED\uC5D0\uC11C \uCF54\uB4DC \uC785\uB825 \uD6C4 \uAC00\uC785\uD574\uC8FC\uC138\uC694!");
+  var kakaoMsg = "\uC548\uB155\uD558\uC138\uC694! \uD83D\uDCF1 TodayNote \uC571\uC73C\uB85C \uC218\uC5C5\uC744 \uAD00\uB9AC\uD558\uAC8C \uB410\uC5B4\uC694.\n\n\uC571 \uC8FC\uC18C: ".concat(APP_URL, "\n\uD83C\uDFEB \uD559\uC6D0 \uCF54\uB4DC: ").concat(code || '(설정 중)', "\n\n\u2192 \uC571 \uC811\uC18D \uD6C4 \"\uD83C\uDFEB \uCF54\uB4DC\uB85C \uAC00\uC785\" \uD0ED\uC5D0\uC11C \uCF54\uB4DC \uC785\uB825 \uD6C4 \uAC00\uC785\uD574\uC8FC\uC138\uC694!");
   return /*#__PURE__*/React.createElement("div", {
     style: {
       padding: 16,
@@ -19548,7 +19548,7 @@ function FinanceSheet(_ref81) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = "ScheduleMate_\uC7AC\uBB34_".concat(monthKey, ".csv");
+    a.download = "TodayNote_\uC7AC\uBB34_".concat(monthKey, ".csv");
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -25710,12 +25710,12 @@ function LoginScreen(_ref101) {
       fontWeight: 800,
       marginBottom: 4
     }
-  }, "ScheduleMate"), /*#__PURE__*/React.createElement("p", {
+  }, "TodayNote"), /*#__PURE__*/React.createElement("p", {
     style: {
       color: 'rgba(255,255,255,.5)',
       fontSize: 13
     }
-  }, "\uD559\uC6D0 \uD1B5\uD569 \uAD00\uB9AC \uC2DC\uC2A4\uD15C")), /*#__PURE__*/React.createElement("div", {
+  }, "\uC74C\uC545 \xB7 \uC2A4\uCF00\uC904\uAD00\uB9AC")), /*#__PURE__*/React.createElement("div", {
     style: {
       background: 'rgba(255,255,255,.05)',
       backdropFilter: 'blur(10px)',
@@ -26942,7 +26942,7 @@ function LoginScreen(_ref101) {
       fontSize: 11,
       color: 'rgba(255,255,255,.25)'
     }
-  }, "ScheduleMate \xB7 \uD559\uC6D0 \uAD00\uB9AC \uC2DC\uC2A4\uD15C")));
+  }, "TodayNote \xB7 \uC74C\uC545 \xB7 \uC2A4\uCF00\uC904\uAD00\uB9AC")));
 }
 function PendingApprovalScreen(_ref111) {
   var account = _ref111.account,
@@ -28299,7 +28299,7 @@ function App() {
       alignItems: 'center',
       gap: 4
     }
-  }, "ScheduleMate", cloudStatus === 'synced' && /*#__PURE__*/React.createElement("span", {
+  }, "TodayNote", cloudStatus === 'synced' && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
       background: '#10b981',
@@ -28326,12 +28326,11 @@ function App() {
   }, "\u26A0 \uC624\uB958")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
-      opacity: .4,
+      opacity: .6,
       letterSpacing: '0.5px',
-      textTransform: 'uppercase',
       color: '#fff'
     }
-  }, "Academy Manager")), /*#__PURE__*/React.createElement("div", {
+  }, "\uC74C\uC545 \xB7 \uC2A4\uCF00\uC904\uAD00\uB9AC")), /*#__PURE__*/React.createElement("div", {
     style: {
       width: '1px',
       height: 28,
@@ -28975,7 +28974,7 @@ function App() {
       marginTop: 8,
       lineHeight: 1.6
     }
-  }, "\xA9 2026 StudioPro \xB7 ScheduleMate \xA0|\xA0 All Rights Reserved", /*#__PURE__*/React.createElement("br", null), "Developed & Owned by ", /*#__PURE__*/React.createElement("span", {
+  }, "\xA9 2026 StudioPro \xB7 TodayNote \xA0|\xA0 All Rights Reserved", /*#__PURE__*/React.createElement("br", null), "Developed & Owned by ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'rgba(128,128,128,.65)'
     }
@@ -36701,7 +36700,7 @@ function TermsAgreementScreen(_ref146) {
       fontSize: 13,
       color: 'rgba(255,255,255,.5)'
     }
-  }, "\uD559\uC6D0 \uD1B5\uD569 \uAD00\uB9AC \uC2DC\uC2A4\uD15C")), /*#__PURE__*/React.createElement("div", {
+  }, "\uC74C\uC545 \xB7 \uC2A4\uCF00\uC904\uAD00\uB9AC")), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '20px 24px 0'
     }
@@ -36726,7 +36725,7 @@ function TermsAgreementScreen(_ref146) {
       color: 'rgba(255,255,255,.7)',
       lineHeight: 1.7
     }
-  }, "\uBCF8 \uC18C\uD504\uD2B8\uC6E8\uC5B4(StudioPro \xB7 ScheduleMate)\uC758 \uBAA8\uB4E0 \uC800\uC791\uAD8C\uC740 \uAC1C\uBC1C\uC790(", /*#__PURE__*/React.createElement("b", {
+  }, "\uBCF8 \uC18C\uD504\uD2B8\uC6E8\uC5B4(StudioPro \xB7 TodayNote)\uC758 \uBAA8\uB4E0 \uC800\uC791\uAD8C\uC740 \uAC1C\uBC1C\uC790(", /*#__PURE__*/React.createElement("b", {
     style: {
       color: '#fb7185'
     }
@@ -36957,7 +36956,7 @@ window.addEventListener('load', ()=>{
       banner.innerHTML = `
         ${iconHtml}
         <div style="flex:1;">
-          <div style="font-weight:800;font-size:13px;margin-bottom:2px;">ScheduleMate 앱 설치</div>
+          <div style="font-weight:800;font-size:13px;margin-bottom:2px;">TodayNote 앱 설치</div>
           <div style="font-size:11px;color:rgba(255,255,255,.6);">홈 화면에 추가하고 앱처럼 사용하세요</div>
         </div>
         <button id="pwa-install-btn"
