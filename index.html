@@ -382,7 +382,7 @@ var _sbClientKey = null;
 function getSb(url, key) {
   if (!url || !key) return _sbClient;
   if (_sbClient && _sbClientUrl === url && _sbClientKey === key) return _sbClient;
-  try { _sbClient = supabase.createClient(url, key); _sbClientUrl = url; _sbClientKey = key; } catch (e) { console.error('Supabase init error', e); }
+  try { _sbClient = supabase.createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage } }); _sbClientUrl = url; _sbClientKey = key; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e2) {} } catch (e) { console.error('Supabase init error', e); }
   return _sbClient;
 }
 function getAdminSb() { return null; } // 보안: 관리자 키는 브라우저에 두지 않습니다(서버 함수로 처리)
@@ -27379,15 +27379,17 @@ function App() {
       setAuthLoading(false);
       return;
     }
+    // 네트워크가 느리거나 끊겨도 로딩 화면에서 멈추지 않도록(저장된 로그인은 지우지 않음)
+    var _loadGuard = setTimeout(function () { setAuthLoading(false); }, 8000);
     sb.auth.getSession().then(function (_ref112) {
-      var session = _ref112.data.session;
+      var session = _ref112 && _ref112.data && _ref112.data.session;
       if (session !== null && session !== void 0 && session.user) {
         setAuthUser(session.user);
         fetchUserProfile(session.user.email, sb, true);
       } else {
         setAuthLoading(false);
       }
-    });
+    }).catch(function () { setAuthLoading(false); });
     var _sb$auth$onAuthStateC = sb.auth.onAuthStateChange(function (event, session) {
         if (session !== null && session !== void 0 && session.user) {
           setAuthUser(session.user);
@@ -27403,6 +27405,7 @@ function App() {
       }),
       subscription = _sb$auth$onAuthStateC.data.subscription;
     return function () {
+      clearTimeout(_loadGuard);
       return subscription.unsubscribe();
     };
   }, [sbUrl, sbKey]);

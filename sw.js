@@ -1,5 +1,5 @@
 // ScheduleMate — Service Worker v5.0 (push · 성장노트)
-const CACHE = 'scheduleMate-v6';
+const CACHE = 'scheduleMate-v7';
 const STATIC = [
   '/',
   '/index.html',
