@@ -42,9 +42,10 @@
   function errText(e) { return (e && (e.message || e.error_description || e.msg)) || String(e || '알 수 없는 오류'); }
 
   var C = { bg: '#fff', line: '#e5e7eb', mute: '#6b7280', pink: '#E07B8B', green: '#10b981', amber: '#f59e0b', red: '#ef4444', ink: '#111827', soft: '#f9fafb' };
+  var NARROW = (window.innerWidth || 1024) <= 600;
   var S = {
-    wrap: { padding: 16, maxWidth: 980, margin: '0 auto', color: C.ink, fontFamily: 'inherit' },
-    card: { background: C.bg, border: '1px solid ' + C.line, borderRadius: 14, padding: 16, marginBottom: 14 },
+    wrap: { padding: NARROW ? 6 : 16, maxWidth: 980, margin: '0 auto', color: C.ink, fontFamily: 'inherit' },
+    card: { background: C.bg, border: '1px solid ' + C.line, borderRadius: 14, padding: NARROW ? 12 : 16, marginBottom: 14 },
     h2: { fontSize: 18, fontWeight: 800, margin: '0 0 10px' },
     h3: { fontSize: 14, fontWeight: 700, margin: '0 0 8px' },
     mute: { color: C.mute, fontSize: 12 },
@@ -220,6 +221,28 @@
   }
 
   /* ───────── 학생/학부모 화면 ───────── */
+  /* ───────── 내 비밀번호 변경 (본인이 직접) ───────── */
+  function MyPasswordCard() {
+    var _a = useState(''), pw = _a[0], setPw = _a[1];
+    var _b = useState(''), pw2 = _b[0], setPw2 = _b[1];
+    var _m = useState(''), msg = _m[0], setMsg = _m[1];
+    var _bad = useState(false), bad = _bad[0], setBad = _bad[1];
+    function go() {
+      if (pw.length < 6) { setBad(true); return setMsg('비밀번호는 6자 이상이어야 합니다'); }
+      if (pw !== pw2) { setBad(true); return setMsg('두 비밀번호가 다릅니다'); }
+      sb().auth.updateUser({ password: pw }).then(function (r) {
+        if (r.error) { setBad(true); setMsg(errText(r.error)); } else { setBad(false); setMsg('비밀번호가 변경됐습니다. 다음 로그인부터 새 비밀번호를 쓰세요.'); setPw(''); setPw2(''); }
+      });
+    }
+    return h(Card, { title: '🔑 내 비밀번호 변경' },
+      h('div', { style: S.mute }, '임시 비밀번호로 로그인했다면 여기서 본인만 아는 비밀번호로 바꿔 주세요.'),
+      h('div', { style: Object.assign({ marginTop: 8 }, S.row) },
+        h('input', { type: 'password', style: Object.assign({}, S.input, { flex: 1, minWidth: 140 }), placeholder: '새 비밀번호(6자 이상)', value: pw, autoComplete: 'new-password', onChange: function (e) { setPw(e.target.value); } }),
+        h('input', { type: 'password', style: Object.assign({}, S.input, { flex: 1, minWidth: 140 }), placeholder: '새 비밀번호 확인', value: pw2, autoComplete: 'new-password', onChange: function (e) { setPw2(e.target.value); } }),
+        h('button', { style: S.btn, onClick: go }, '변경')),
+      h(Msg, { text: msg, err: bad }));
+  }
+
   function MMStudent(props) {
     var a = props.account, isStu = a.role === '학생';
     var roster = useQuery(function () { return sb().from('mm_roster').select('*').order('name'); }, [a.email]);
@@ -238,7 +261,8 @@
       h(AttendancePanel, { kid: kid, canScan: isStu, account: a }),
       isStu ? h(PracticePanel, { kid: kid }) : null,
       h(KidTimeline, { kid: kid, showPractice: !isStu }),
-      h(Card, { title: '알림' }, h(PushButton, { email: a.email })));
+      h(Card, { title: '알림' }, h(PushButton, { email: a.email })),
+      h(MyPasswordCard, null));
   }
 
   function AttendancePanel(props) {
@@ -376,14 +400,22 @@
         h('button', { style: flt === 'absent' ? S.btn : S.btn2, onClick: function () { setFlt('absent'); } }, '미등원 ' + cnt.absent),
         h('button', { style: S.btn2, onClick: board.reload }, '↻')),
       h(Msg, { text: board.err || msg, err: true }),
-      board.loading && !board.data ? '불러오는 중…' : h('div', { style: { overflowX: 'auto' } }, h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
+      board.loading && !board.data ? '불러오는 중…' : (NARROW
+        ? h('div', null, rows.map(function (r) {
+            return h('div', { key: r.member_id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 2px', borderBottom: '1px solid ' + C.line } },
+              h('div', { style: { flex: 1, minWidth: 0 } },
+                h('div', { style: { fontWeight: 700, fontSize: 14 } }, r.name, ' ', stateBadge[r.state]),
+                h('div', { style: S.mute }, (r.subject || '-') + (r.first_in ? ' · 등원 ' + hhmm(r.first_in) : '') + (r.state === 'left' ? ' · 하원 ' + hhmm(r.last_out) : ''))),
+              h('button', { style: S.btn2, onClick: function () { manual(r, r.state === 'present' ? 'out' : 'in'); } }, r.state === 'present' ? '하원' : '등원'));
+          }))
+        : h('div', { style: { overflowX: 'auto' } }, h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
         h('thead', null, h('tr', null, ['학생', '과목', '상태', '등원', '하원', '수동'].map(function (t) { return h('th', { key: t, style: S.th }, t); }))),
         h('tbody', null, rows.map(function (r) {
           return h('tr', { key: r.member_id },
             h('td', { style: S.td }, r.name), h('td', { style: S.td }, r.subject || '-'),
             h('td', { style: S.td }, stateBadge[r.state]), h('td', { style: S.td }, hhmm(r.first_in)), h('td', { style: S.td }, r.state === 'left' ? hhmm(r.last_out) : '-'),
             h('td', { style: S.td }, h('button', { style: S.btn2, onClick: function () { manual(r, r.state === 'present' ? 'out' : 'in'); } }, r.state === 'present' ? '하원' : '등원')));
-        })))),
+        }))))),
       !rows.length && !board.loading ? h('div', { style: S.mute }, '표시할 학생이 없습니다. (설정 > 명단 동기화를 먼저 실행하세요)') : null);
   }
 
@@ -467,10 +499,12 @@
     var studio = String(a.studioId);
     return h('div', null,
       isAdmin(a) ? h(ImportCard, props) : null,
+      isAdmin(a) ? h(ClassImportCard, props) : null,
       isAdmin(a) ? h(NameFixCard, { members: members, setMembers: props.setMembers }) : null,
       isOwner(a) ? h(AiKeyCard, { studio: studio }) : null,
       h(RosterCard, { studio: studio, members: members, instructors: instructors }),
       h(ResetPwCard, { studio: studio }),
+      h(MyPasswordCard, null),
       isOwner(a) ? h(ScopeCard, { studio: studio, members: members, instructors: instructors }) : null,
       h(QrCard, { studio: studio }));
   }
@@ -644,6 +678,94 @@
         h('div', { style: Object.assign({ marginTop: 10 }, S.row) },
           h('button', { style: S.btn, onClick: apply, disabled: !plan.members.length }, plan.members.length + '명 등록하기'),
           h('button', { style: S.btn2, onClick: function () { setPlan(null); } }, '취소'))) : null,
+      h(Msg, { text: msg, err: bad }));
+  }
+
+
+  /* ───────── 스튜디오메이트 수업 목록 엑셀 가져오기 ───────── */
+  function buildClassImport(rows, cur) {
+    var seq = Date.now().toString(36), today = new Date().toISOString().slice(0, 10);
+    var instByName = {}; (cur.instructors || []).forEach(function (i) { instByName[String(i.name).split(/\s+/)[0]] = i; });
+    var rooms = (cur.rooms || []).slice(), roomByName = {}; rooms.forEach(function (r) { roomByName[r.name] = r; });
+    var types = cur.classTypes || [];
+    function typ(n) { return types.filter(function (t) { return t.name === n; })[0]; }
+    var tPriv = typ('개인레슨'), tGroup = typ('그룹레슨'), tPrac = typ('연습실');
+    var memByName = {}; (cur.members || []).forEach(function (m) { var n = cleanName(m.name).name; (memByName[n] = memByName[n] || []).push(m); });
+    var exist = {}; (cur.classes || []).forEach(function (c) { exist[[c.date, c.time, c.instructorId, c.title].join('|')] = 1; });
+    var newInst = [], newRooms = [], out = [], dup = 0, matched = 0, noRoom = 0, warn = [];
+    var firstRoom = rooms.filter(function (r) { return r.isOpen; })[0] || rooms[0];
+    function mins(t) { var a = String(t).split(':'); return (+a[0]) * 60 + (+a[1]); }
+    rows.forEach(function (r, idx) {
+      var date = String(r['수업일'] || '').slice(0, 10), st = String(r['수업시작시간'] || ''), en = String(r['수업종료시간'] || '');
+      if (!/^\d{4}-\d\d-\d\d$/.test(date) || !/^\d+:\d\d/.test(st)) return;
+      var iRaw = String(r['강사'] || '').trim(), first = iRaw.split(/\s+/)[0], inst = null;
+      var isPracticeName = /연습/.test(iRaw) || /연습/.test(String(r['수업명'] || ''));
+      if (iRaw && !isPracticeName) {
+        inst = instByName[first];
+        if (!inst) {
+          inst = { id: 'ti_' + seq + '_' + newInst.length, name: first, subject: iRaw.split(/\s+/).slice(1).join(' ').replace(/강사$/, '') || '음악', phone: '', payType: '수업당', payAmount: 0,
+            joinDate: today, color: IMP_COLORS[(newInst.length + (cur.instructors || []).length) % IMP_COLORS.length], personalRate: 0, groupRate: 0,
+            contractSigned: false, contractSignature: '', contractSignedAt: '' };
+          newInst.push(inst); instByName[first] = inst;
+        }
+      }
+      var rn = String(r['룸'] || '').trim(), room = null;
+      if (rn) {
+        room = roomByName[rn];
+        if (!room) { room = { id: Math.max.apply(null, [0].concat(rooms.map(function (x) { return +x.id || 0; }))) + 1, name: rn, type: '음악', isOpen: true }; rooms.push(room); newRooms.push(room); roomByName[rn] = room; }
+      } else { room = firstRoom; noRoom++; }
+      var priv = String(r['수업'] || '') === '프라이빗';
+      var ct = isPracticeName ? (tPrac || tGroup) : (priv ? tPriv : tGroup) || tPriv;
+      var title = String(r['수업명'] || '').trim(), stu = title.replace(/\s*님$/, '').trim();
+      var enrolled = [];
+      if (priv && !isPracticeName) {
+        var cand = memByName[cleanName(stu).name] || memByName[stu.split(/\s+/)[0]] || [];
+        if (cand.length === 1) { enrolled = [cand[0].id]; matched++; }
+      }
+      var dur = Math.max(10, mins(en) - mins(st)) || 50;
+      var cls = { id: 'ci_' + seq + '_' + idx, roomId: room ? room.id : null, instructorId: inst ? inst.id : null, classTypeId: ct ? ct.id : null,
+        title: title, date: date, time: st.slice(0, 5), duration: dur, capacity: Number(r['최대수강인원']) || (priv ? 1 : 10), enrolled: enrolled, color: inst ? inst.color : (ct && ct.color) || '#3b82f6' };
+      if (exist[[cls.date, cls.time, cls.instructorId, cls.title].join('|')]) { dup++; return; }
+      out.push(cls);
+    });
+    if (dup) warn.push('이미 등록된 수업 ' + dup + '건은 건너뜁니다');
+    if (newInst.length) warn.push('새 강사 ' + newInst.length + '명 추가: ' + newInst.map(function (i) { return i.name; }).join(', '));
+    if (newRooms.length) warn.push('새 룸 ' + newRooms.length + '개 추가: ' + newRooms.map(function (i) { return i.name; }).join(', '));
+    if (noRoom) warn.push('룸이 비어 있는 수업 ' + noRoom + '건은 첫 번째 룸에 넣습니다(나중에 수업 칸에서 옮길 수 있어요)');
+    warn.push('프라이빗 수업 중 회원과 이름이 일치한 ' + matched + '건은 수강생이 자동 연결됩니다');
+    return { classes: out, instructors: newInst, rooms: newRooms, warn: warn };
+  }
+
+  function ClassImportCard(props) {
+    var _p = useState(null), plan = _p[0], setPlan = _p[1];
+    var _m = useState(''), msg = _m[0], setMsg = _m[1];
+    var _bad = useState(false), bad = _bad[0], setBad = _bad[1];
+    var can = !!(props.setClasses && props.setRooms && props.setInstructors && props.classTypes);
+    function onFile(ev) {
+      var f = ev.target.files && ev.target.files[0]; if (!f) return;
+      setBad(false); setMsg('읽는 중…'); setPlan(null);
+      loadSheetJS().then(function () { return f.arrayBuffer(); }).then(function (buf) {
+        var wb = window.XLSX.read(buf, { type: 'array' });
+        var rows = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null, raw: false });
+        if (!rows.length || !('수업일' in rows[0])) throw new Error('스튜디오메이트 수업 목록 엑셀이 아닙니다 ("수업일" 열 없음)');
+        setPlan(buildClassImport(rows, props)); setMsg('');
+      }).catch(function (e) { setBad(true); setMsg(errText(e)); });
+      ev.target.value = '';
+    }
+    function apply() {
+      props.setInstructors(function (p) { return (p || []).concat(plan.instructors); });
+      props.setRooms(function (p) { return (p || []).concat(plan.rooms); });
+      props.setClasses(function (p) { return (p || []).concat(plan.classes); });
+      setPlan(null); setBad(false); setMsg('수업 ' + plan.classes.length + '건을 등록했어요. 일정 화면에서 확인하세요.');
+    }
+    if (!can) return null;
+    return h(Card, { title: '📅 스튜디오메이트 수업 일정 가져오기' },
+      h('div', { style: S.mute }, '스튜디오메이트 "수업 목록 엑셀"(수업 > 수업 목록 > 엑셀 다운)을 올리면 일정에 한꺼번에 등록합니다. 미리보기 후 확정돼요.'),
+      h('div', { style: { marginTop: 8 } }, h('label', { style: Object.assign({}, S.btn2, { display: 'inline-block' }) }, '📁 수업 목록 엑셀 선택', h('input', { type: 'file', accept: '.xlsx,.xls', style: { display: 'none' }, onChange: onFile }))),
+      plan ? h('div', { style: { marginTop: 12 } },
+        h('div', { style: S.row }, badge('수업 ' + plan.classes.length + '건', C.green), badge('새 강사 ' + plan.instructors.length, C.mute), badge('새 룸 ' + plan.rooms.length, C.mute)),
+        h('ul', { style: { margin: '8px 0', paddingLeft: 18, fontSize: 12, color: C.mute } }, plan.warn.map(function (w, i) { return h('li', { key: i }, w); })),
+        h('div', { style: S.row }, h('button', { style: S.btn, onClick: apply, disabled: !plan.classes.length }, plan.classes.length + '건 등록하기'), h('button', { style: S.btn2, onClick: function () { setPlan(null); } }, '취소'))) : null,
       h(Msg, { text: msg, err: bad }));
   }
 

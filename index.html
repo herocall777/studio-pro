@@ -265,10 +265,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
   .topnav-items{display:none!important}
   .mobile-nav{display:block!important}
   .main{padding-bottom:calc(58px + env(safe-area-inset-bottom,0px))!important}
-  .topnav-head{min-height:44px!important;padding:5px 10px!important}
+  .topnav-head{min-height:44px!important;padding:5px 10px!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .topnav-head::-webkit-scrollbar{display:none}
+  .topnav-head>*{flex-shrink:0}
+  .topnav-head select{max-width:118px;font-size:13px!important}
   .mobile-hide{display:none!important}
   .content{overflow-y:auto;-webkit-overflow-scrolling:touch}
 }
+/* ── 모바일: 7칸 달력은 항상 7열 유지(위 규칙이 1열로 접던 문제 수정) ── */
+[style*="repeat(7,1fr)"],[style*="repeat(7, 1fr)"]{grid-template-columns:repeat(7,minmax(0,1fr))!important}
 </style>
 </head>
 <body>
@@ -3030,7 +3035,7 @@ function Schedule(_ref14) {
     addNotification = _ref14.addNotification,
     bookingSettings = _ref14.bookingSettings;
   var _useState9 = useState(function () {
-      return window.innerWidth <= 768 ? '월' : '주';
+      return window.innerWidth <= 768 ? '일' : '주';
     }),
     _useState0 = _slicedToArray(_useState9, 2),
     viewMode = _useState0[0],
@@ -27218,7 +27223,7 @@ function App() {
     _useState448 = _slicedToArray(_useState447, 2),
     shownPopups = _useState448[0],
     setShownPopups = _useState448[1];
-  var _useState449 = useState(true),
+  var _useState449 = useState(window.innerWidth > 768),
     _useState450 = _slicedToArray(_useState449, 2),
     mgrPanelOpen = _useState450[0],
     setMgrPanelOpen = _useState450[1];
@@ -28900,7 +28905,12 @@ function App() {
     instructors: instructors,
     setMembers: setMembers,
     setPasses: setPasses,
-    setInstructors: setInstructors
+    setInstructors: setInstructors,
+    classes: classes,
+    setClasses: setClasses,
+    rooms: rooms,
+    setRooms: setRooms,
+    classTypes: classTypes
   }), window.MMGlobal && /*#__PURE__*/React.createElement(window.MMGlobal, {
     account: Object.assign({}, effectiveAccount, { studioId: effectiveAccount && effectiveAccount.studioId || activeStudioId }),
     permSettings: permSettings,
@@ -28964,6 +28974,15 @@ function App() {
   }, "\uC774 \uC18C\uD504\uD2B8\uC6E8\uC5B4\uC758 \uC800\uC791\uAD8C\uC740 \uAC1C\uBC1C\uC790\uC5D0\uAC8C \uADC0\uC18D\uB429\uB2C8\uB2E4. \uBB34\uB2E8 \uBCF5\uC81C\xB7\uC218\uC815\xB7\uBC30\uD3EC\xB7\uC0C1\uC5C5\uC801 \uC0AC\uC6A9\uC744 \uAE08\uC9C0\uD569\uB2C8\uB2E4."), /*#__PURE__*/React.createElement("br", null), "Unauthorized copying, modification, distribution or commercial use is strictly prohibited.", /*#__PURE__*/React.createElement("br", null), "\uBC95\uC801 \uBB38\uC758: herocall1@gmail.com"), function () {
     // 역할별 하단 탭 정의
     var mobileNavItems = function () {
+      if (effectiveRole === '학부모') return [{
+        id: 'mm-student',
+        icon: '📲',
+        label: '우리 아이'
+      }, {
+        id: 'bulletin',
+        icon: '📋',
+        label: '게시판'
+      }];
       if (effectiveRole === '학생') return [{
         id: 'mystudent',
         icon: '📅',
@@ -28976,6 +28995,10 @@ function App() {
         id: 'practice',
         icon: '🎵',
         label: '연습하기'
+      }, {
+        id: 'mm-student',
+        icon: '📲',
+        label: '출결·기록'
       }, {
         id: 'bulletin',
         icon: '📋',
@@ -28990,9 +29013,9 @@ function App() {
         icon: '👨‍🎓',
         label: '내 학생'
       }, {
-        id: 'members',
-        icon: '👥',
-        label: '회원'
+        id: 'mm-board',
+        icon: '🕘',
+        label: '출결·기록'
       }, {
         id: 'bulletin',
         icon: '📋',
@@ -29016,9 +29039,9 @@ function App() {
         icon: '📊',
         label: '매출'
       }, {
-        id: 'messages',
-        icon: '✉️',
-        label: '메시지'
+        id: 'mm-board',
+        icon: '🕘',
+        label: '출결·기록'
       }, {
         id: '__more__',
         icon: '⋯',
